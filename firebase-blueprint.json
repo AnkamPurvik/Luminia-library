@@ -1,0 +1,63 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "User account information",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["admin", "member"] },
+        "membershipStatus": { "type": "string", "enum": ["active", "suspended", "expired"] },
+        "firebaseUid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "email", "role", "membershipStatus", "firebaseUid", "createdAt"]
+    },
+    "Book": {
+      "title": "Book",
+      "description": "Library book catalog item",
+      "type": "object",
+      "properties": {
+        "isbn": { "type": "string" },
+        "title": { "type": "string" },
+        "author": { "type": "string" },
+        "genre": { "type": "string" },
+        "totalCopies": { "type": "integer" },
+        "availableCopies": { "type": "integer" },
+        "description": { "type": "string" },
+        "coverUrl": { "type": "string" }
+      },
+      "required": ["isbn", "title", "author", "genre", "totalCopies", "availableCopies"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Book lending transaction",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "bookId": { "type": "string" },
+        "issueDate": { "type": "string", "format": "date-time" },
+        "dueDate": { "type": "string", "format": "date-time" },
+        "returnDate": { "type": "string", "format": "date-time" },
+        "fineAmount": { "type": "number" },
+        "status": { "type": "string", "enum": ["borrowed", "returned", "overdue"] }
+      },
+      "required": ["userId", "bookId", "issueDate", "dueDate", "status"]
+    }
+  },
+  "firestore": {
+    "users": {
+      "schema": "UserProfile",
+      "description": "Collection of user profiles"
+    },
+    "books": {
+      "schema": "Book",
+      "description": "Collection of library books"
+    },
+    "transactions": {
+      "schema": "Transaction",
+      "description": "Collection of lending transactions"
+    }
+  }
+}
