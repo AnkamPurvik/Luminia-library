@@ -79,7 +79,7 @@ export default function App() {
   const isAdmin = profile?.role === 'admin';
 
   return (
-    <Router>
+    <Router basename={import.meta.env.BASE_URL}>
       <div className="min-h-screen bg-slate-50 font-sans antialiased">
         <Toaster position="top-right" />
         <Navbar user={user} isAdmin={isAdmin} isPro={profile?.isPro} searchQuery={searchQuery} onSearchChange={setSearchQuery} />
