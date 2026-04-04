@@ -329,11 +329,11 @@ export default function OPAC({ searchQuery: globalSearch, onSearchChange: setGlo
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                onClick={handleLogin}
+                onClick={() => navigate('/login')}
                 className="inline-flex items-center px-8 py-4 border border-transparent rounded-2xl text-lg font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-xl shadow-indigo-200 transition-all active:scale-95 group"
               >
                 <LogIn className="mr-2 h-6 w-6 group-hover:translate-x-1 transition-transform" />
-                Get Started with Google
+                Get Started
               </motion.button>
             </div>
 

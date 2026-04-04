@@ -25,6 +25,8 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [userTransactions, setUserTransactions] = useState<any[]>([]);
+  const [isbnLookup, setIsbnLookup] = useState('');
+  const [isFetching, setIsFetching] = useState(false);
   const [modalConfig, setModalConfig] = useState<{
     isOpen: boolean;
     title: string;
@@ -100,6 +102,81 @@ export default function AdminDashboard() {
       });
     }
     setIsModalOpen(true);
+    setIsbnLookup('');
+  };
+
+  const fetchBookDetails = async () => {
+    const cleanIsbn = isbnLookup.replace(/[-\s]/g, '');
+    if (cleanIsbn.length !== 10 && cleanIsbn.length !== 13) {
+      toast.error('Please enter a valid 10 or 13-digit ISBN');
+      return;
+    }
+
+    setIsFetching(true);
+    try {
+      // 1. Try Google Books API
+      const googleRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanIsbn}`);
+      const googleData = await googleRes.json();
+
+      let bookInfo: Partial<Book> = {};
+
+      if (googleData.totalItems > 0) {
+        const item = googleData.items[0].volumeInfo;
+        bookInfo = {
+          title: item.title || '',
+          author: item.authors ? item.authors[0] : '',
+          genre: item.categories ? item.categories[0] : '',
+          description: item.description || '',
+          coverUrl: item.imageLinks ? item.imageLinks.thumbnail.replace('http:', 'https:') : '',
+          isbn: cleanIsbn
+        };
+      } else {
+        // 2. Fallback to Open Library API
+        const olRes = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${cleanIsbn}&format=json&jscmd=data`);
+        const olData = await olRes.json();
+        const key = `ISBN:${cleanIsbn}`;
+
+        if (olData[key]) {
+          const item = olData[key];
+          bookInfo = {
+            title: item.title || '',
+            author: item.authors ? item.authors[0].name : '',
+            genre: item.subjects ? item.subjects[0].name : '',
+            description: item.notes || '',
+            coverUrl: item.cover ? item.cover.large : '',
+            isbn: cleanIsbn
+          };
+        }
+      }
+
+      if (Object.keys(bookInfo).length > 0) {
+        const hasExistingData = formData.title || formData.author || formData.description;
+        
+        const applyData = () => {
+          setFormData(prev => ({
+            ...prev,
+            ...bookInfo,
+            isbn: cleanIsbn // Always update ISBN to the one fetched
+          }));
+          toast.success('Book details fetched!');
+        };
+
+        if (hasExistingData) {
+          if (window.confirm('This will overwrite currently entered data. Continue?')) {
+            applyData();
+          }
+        } else {
+          applyData();
+        }
+      } else {
+        toast.error('Book details not found. Please enter manually.');
+      }
+    } catch (err) {
+      console.error('Fetch error:', err);
+      toast.error('Failed to fetch book details.');
+    } finally {
+      setIsFetching(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -547,6 +624,43 @@ export default function AdminDashboard() {
                   <X size={24} />
                 </button>
               </div>
+
+              {/* ISBN Quick Phil Header */}
+              {!editingBook && (
+                <div className="bg-indigo-50/50 p-6 border-b border-slate-100">
+                  <div className="space-y-1">
+                    <label className="text-xs font-black uppercase text-indigo-600 tracking-widest flex items-center gap-1.5 mb-2">
+                       <Sparkles size={14} /> Quick Fill via ISBN
+                    </label>
+                    <div className="flex gap-2">
+                      <div className="relative flex-grow">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                          <Hash size={16} />
+                        </div>
+                        <input 
+                          placeholder="Enter 10 or 13 digit ISBN..."
+                          className="w-full pl-10 pr-4 py-3 bg-white border border-indigo-100 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-sm transition-all shadow-sm"
+                          value={isbnLookup}
+                          onChange={e => setIsbnLookup(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), fetchBookDetails())}
+                        />
+                      </div>
+                      <button 
+                        type="button"
+                        onClick={fetchBookDetails}
+                        disabled={isFetching || !isbnLookup}
+                        className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50 transition-all shadow-lg shadow-indigo-100 flex items-center gap-2 active:scale-95 whitespace-nowrap"
+                      >
+                        {isFetching ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />}
+                        Fetch Details
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-2 font-medium italic">
+                      Type the ISBN and hit Fetch to auto-populate book details instantly.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -118,7 +118,7 @@ export function Navbar({ user, isAdmin, isPro, searchQuery, onSearchChange }: Na
               </div>
             ) : (
               <Link
-                to="/"
+                to="/login"
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition-all active:scale-95"
               >
                 Sign In

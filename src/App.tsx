@@ -16,6 +16,7 @@ import UserDashboard from './pages/UserDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import BookDetail from './pages/BookDetail';
 import LuminaPro from './pages/LuminaPro';
+import Login from './pages/Login';
 import { Loader2 } from 'lucide-react';
 
 export default function App() {
@@ -87,6 +88,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<OPAC searchQuery={searchQuery} onSearchChange={setSearchQuery} />} />
             <Route path="/book/:id" element={<BookDetail />} />
+            <Route path="/login" element={<Login />} />
             <Route 
               path="/dashboard" 
               element={user ? <UserDashboard /> : <Navigate to="/" />} 
