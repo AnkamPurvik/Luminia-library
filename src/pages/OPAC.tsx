@@ -240,8 +240,11 @@ export default function OPAC({ searchQuery: globalSearch, onSearchChange: setGlo
           bookId: book.id,
           bookTitle: book.title,
           bookCover: book.coverUrl || '',
-          issueDate: new Date().toISOString(),
-          dueDate: dueDate.toISOString(),
+          borrowed_at: new Date().toISOString(), // Precision timestamp
+          expected_return: dueDate.toISOString(), // System deadline
+          returned_at: null, // Scanned back later
+          issueDate: new Date().toISOString(), // Fallback
+          dueDate: dueDate.toISOString(), // Fallback
           fineAmount: 0,
           status: 'borrowed'
         };

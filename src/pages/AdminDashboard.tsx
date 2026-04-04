@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { collection, onSnapshot, query, addDoc, updateDoc, doc, deleteDoc, where, getDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { Book } from '../types';
@@ -14,6 +15,7 @@ import { Modal } from '../components/ui/Modal';
 import toast from 'react-hot-toast';
 
 export default function AdminDashboard() {
+  const navigate = useNavigate();
   const [books, setBooks] = useState<Book[]>([]);
   const [membersCount, setMembersCount] = useState(0);
   const [totalFines, setTotalFines] = useState(0);
@@ -122,12 +124,35 @@ export default function AdminDashboard() {
 
       if (googleData.totalItems > 0) {
         const item = googleData.items[0].volumeInfo;
+        const volumeId = googleData.items[0].id;
+        
+        // 1. Prioritize Open Library High-Res Cover (often better than Google thumbnails)
+        // 2. Construct high-quality Google Books URL as secondary
+        // 3. Use provided imageLinks as tertiary
+        
+        const olCoverUrl = `https://covers.openlibrary.org/b/isbn/${cleanIsbn}-L.jpg?default=false`;
+        const googleHighResUrl = `https://books.google.com/books/content?id=${volumeId}&printsec=frontcover&img=1&zoom=3&source=gbs_api`;
+        
+        let coverUrl = googleHighResUrl; // Start with high-res construction
+
+        if (item.imageLinks) {
+          const links = item.imageLinks;
+          // If Google provides explicit high-res links, use those
+          const bestGoogleLink = links.extraLarge || links.large || links.medium;
+          if (bestGoogleLink) {
+            coverUrl = bestGoogleLink;
+          }
+        }
+
+        // Clean up URL
+        coverUrl = coverUrl.replace('http:', 'https:').replace('&edge=curl', '');
+
         bookInfo = {
           title: item.title || '',
           author: item.authors ? item.authors[0] : '',
           genre: item.categories ? item.categories[0] : '',
           description: item.description || '',
-          coverUrl: item.imageLinks ? item.imageLinks.thumbnail.replace('http:', 'https:') : '',
+          coverUrl: coverUrl,
           isbn: cleanIsbn
         };
       } else {
@@ -142,8 +167,8 @@ export default function AdminDashboard() {
             title: item.title || '',
             author: item.authors ? item.authors[0].name : '',
             genre: item.subjects ? item.subjects[0].name : '',
-            description: item.notes || '',
-            coverUrl: item.cover ? item.cover.large : '',
+            description: item.notes || (item.excerpts ? item.excerpts[0].text : ''),
+            coverUrl: `https://covers.openlibrary.org/b/isbn/${cleanIsbn}-L.jpg?default=false`,
             isbn: cleanIsbn
           };
         }
@@ -279,7 +304,8 @@ export default function AdminDashboard() {
     try {
       await updateDoc(doc(db, 'transactions', transaction.id), {
         status: 'returned',
-        returnDate: new Date().toISOString()
+        returned_at: new Date().toISOString(), // Log return time
+        returnDate: new Date().toISOString() // Fallback
       });
 
       const bookRef = doc(db, 'books', transaction.bookId);
@@ -466,6 +492,13 @@ export default function AdminDashboard() {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
+                      <button 
+                        onClick={() => navigate(`/admin/book/${book.id}`)}
+                        className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                        title="View Movement History Audit"
+                      >
+                         <Clock size={18} />
+                      </button>
                       <button 
                         onClick={() => handleOpenModal(book)}
                         className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"

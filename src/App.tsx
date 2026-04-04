@@ -14,6 +14,7 @@ import { Navbar } from './components/layout/Navbar';
 import OPAC from './pages/OPAC';
 import UserDashboard from './pages/UserDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import AdminBookDetail from './pages/AdminBookDetail';
 import BookDetail from './pages/BookDetail';
 import LuminaPro from './pages/LuminaPro';
 import Login from './pages/Login';
@@ -96,6 +97,10 @@ export default function App() {
             <Route 
               path="/admin" 
               element={isAdmin ? <AdminDashboard /> : <Navigate to="/" />} 
+            />
+            <Route 
+              path="/admin/book/:id" 
+              element={isAdmin ? <AdminBookDetail /> : <Navigate to="/" />} 
             />
             <Route path="/pro" element={<LuminaPro />} />
           </Routes>
