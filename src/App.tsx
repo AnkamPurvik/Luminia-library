@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from './lib/firebase';
@@ -79,7 +79,7 @@ export default function App() {
   const isAdmin = profile?.role === 'admin';
 
   return (
-    <Router basename={import.meta.env.BASE_URL}>
+    <Router>
       <div className="min-h-screen bg-slate-50 font-sans antialiased">
         <Toaster position="top-right" />
         <Navbar user={user} isAdmin={isAdmin} isPro={profile?.isPro} searchQuery={searchQuery} onSearchChange={setSearchQuery} />
