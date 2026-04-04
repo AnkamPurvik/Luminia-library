@@ -48,23 +48,32 @@ export default function AdminBookDetail() {
       where('bookId', '==', id)
     );
     
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const transData = snapshot.docs.map(doc => {
-        const data = doc.data();
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      const transData = await Promise.all(snapshot.docs.map(async (docSnap) => {
+        const data = docSnap.data();
+        let name = data.userName;
+        
+        // If name is missing or generic, try to fetch from user profile
+        if (!name || name === 'Member') {
+          const userSnap = await getDoc(doc(db, 'users', data.userId));
+          if (userSnap.exists()) {
+            name = userSnap.data().name;
+          }
+        }
+
         return {
-          id: doc.id,
+          id: docSnap.id,
           userId: data.userId,
-          // Support both older and newer field names for compatibility
           borrowed_at: data.borrowed_at || data.issueDate,
           returned_at: data.returned_at || data.returnDate,
           expected_return: data.expected_return || data.dueDate,
           status: data.status,
-          userName: data.userName || 'Member', // Fallback
+          userName: name || 'Anonymous Member',
           userEmail: data.userEmail || '',
         } as TransactionLog;
-      }).sort((a, b) => new Date(b.borrowed_at).getTime() - new Date(a.borrowed_at).getTime());
+      }));
       
-      setTransactions(transData);
+      setTransactions(transData.sort((a, b) => new Date(b.borrowed_at).getTime() - new Date(a.borrowed_at).getTime()));
       setIsLoading(false);
     });
 

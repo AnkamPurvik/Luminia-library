@@ -1,20 +1,64 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# 📚 Luminia Library
 
-# Run and deploy your AI Studio app
+**Luminia Library** is a state-of-the-art, AI-enhanced library management system built with high-fidelity aesthetics and modern web performance. Designed to provide a seamless experience for both members and administrators.
 
-This contains everything you need to run your app locally.
+![Lumina Preview](https://via.placeholder.com/1200x600/6366f1/ffffff?text=Luminia+Library+Management+System)
 
-View your app in AI Studio: https://ai.studio/apps/6923e8b1-b2b9-4ce1-843d-c3cf64249dca
+---
 
-## Run Locally
+## ✨ Features
 
-**Prerequisites:**  Node.js
+### 🏢 For Administrators
+*   **Time-Action Audit Log**: A precision vertical timeline tracking every book movement (borrow/return/overdue) with down-to-the-minute accuracy.
+*   **AI Cataloging**: Instantly populate book metadata and high-resolution covers using Google Books & Open Library ISBN fetching.
+*   **Late Fee Auto-Calculator**: Dynamic calculation of fines based on real-time overdue metrics.
+*   **One-Click User Management**: Effortlessly swap roles, manage Lumina Pro upgrades, and view detailed user histories.
+*   **Inventory Control**: Full CRUD operations for books with sophisticated visual stock indicators.
 
+### 👤 For Members (OPAC)
+*   **Advanced Search**: Instantly find titles through a global search powered by intelligent genre matching.
+*   **Lumina Pro**: A premium subscription model offering unlimited borrowing, zero fines, and extended loan periods.
+*   **One-Click Borrowing**: Borrow any available copy instantly or reserve it if stock is out.
+*   **Smart Dashboard**: A personal command center showing active loans, due dates, and reservation status.
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+---
+
+## 🛠️ Technology Stack
+
+*   **Frontend**: React (TSX) + Vite 6
+*   **Styling**: Tailwind CSS 4 + Motion (Motion for React)
+*   **Database & Auth**: Firebase Firestore + Firebase Authentication
+*   **Intelligence**: Integration with Google Books & Open Library APIs
+*   **Deployment**: GitHub Pages (Static Hosting)
+
+---
+
+## 🚀 Quick Start
+
+### Installation
+```bash
+# Clone the repository
+git clone https://github.com/AnkamPurvik/Luminia-library.git
+
+# Install dependencies
+npm install
+
+# Run the project locally
+npm run dev
+```
+
+---
+
+## 🛡️ Administrative Console
+Accessing the admin console requires an account with `'admin'` role assigned in the Firestore `users` collection.
+*   **Dashboard URL**: `/admin`
+*   **Book Movement URL**: `/admin/book/:id`
+
+---
+
+## 📸 Project Context
+This project was developed with a focus on **Premium UI/UX**, utilizing glassmorphism, vibrant color palettes, and interactive micro-animations to provide a professional, enterprise-grade feel.
+
+---
+
+*Developed with ❤️ by [Ankam Purvik](https://github.com/AnkamPurvik)*
