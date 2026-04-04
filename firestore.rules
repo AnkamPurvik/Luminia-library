@@ -1,0 +1,177 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Fields:
+    //   - name: string (required)
+    //   - email: string (required, email format)
+    //   - role: string (required, ['admin', 'member'])
+    //   - membershipStatus: string (required, ['active', 'suspended', 'expired'])
+    //   - firebaseUid: string (required)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: books
+    // Fields:
+    //   - isbn: string (required)
+    //   - title: string (required)
+    //   - author: string (required)
+    //   - genre: string (required)
+    //   - totalCopies: int (required)
+    //   - availableCopies: int (required)
+    //   - description: string (optional)
+    //   - coverUrl: string (optional)
+    //
+    // Collection: transactions
+    // Fields:
+    //   - userId: string (required)
+    //   - bookId: string (required)
+    //   - issueDate: timestamp (required)
+    //   - dueDate: timestamp (required)
+    //   - returnDate: timestamp (optional)
+    //   - fineAmount: number (required)
+    //   - status: string (required, ['borrowed', 'returned', 'overdue'])
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        ((exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
+         (request.auth.token.email == "purvik.ankam@gmail.com"));
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidUrl(url) {
+      return url is string && (url.matches("^https://.*") || url.matches("^http://.*"));
+    }
+
+    // ===============================================================
+    // Collection Rules
+    // ===============================================================
+
+    // Users Collection
+    match /users/{userId} {
+      function isValidUser(data) {
+        return data.keys().hasAll(['name', 'email', 'role', 'createdAt']) &&
+               data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+               isValidEmail(data.email) &&
+               data.role in ['admin', 'member'] &&
+               (data.createdAt is timestamp || data.createdAt is string) &&
+               (!('membershipStatus' in data) || data.membershipStatus in ['active', 'suspended', 'expired']) &&
+               (!('firebaseUid' in data) || data.firebaseUid is string);
+      }
+
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && 
+                    ((isOwner(userId) && request.resource.data.role == 'member') || isAdmin());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) &&
+                    ((isOwner(userId) && request.resource.data.role == resource.data.role) || isAdmin());
+    }
+
+    // Books Collection
+    match /books/{bookId} {
+      function isValidBook(data) {
+        return data.keys().hasAll(['isbn', 'title', 'author', 'genre', 'totalCopies', 'availableCopies']) &&
+               data.isbn is string && data.isbn.size() > 0 && data.isbn.size() < 50 &&
+               data.title is string && data.title.size() > 0 && data.title.size() < 500 &&
+               data.author is string && data.author.size() > 0 && data.author.size() < 200 &&
+               data.genre is string && data.genre.size() < 100 &&
+               data.totalCopies is number && data.totalCopies >= 0 &&
+               data.availableCopies is number && data.availableCopies >= 0 && data.availableCopies <= data.totalCopies &&
+               (!('description' in data) || (data.description is string && data.description.size() < 5000)) &&
+               (!('coverUrl' in data) || (data.coverUrl is string && data.coverUrl.size() < 2000));
+      }
+
+      // OPAC is public read for authenticated users by default
+      allow read: if isAuthenticated();
+      
+      // Only admins can modify the catalog, but members can update availableCopies when borrowing/returning
+      allow create, delete: if isAdmin() && (request.method == 'delete' || isValidBook(request.resource.data));
+      allow update: if (isAdmin() && isValidBook(request.resource.data)) || 
+                    (isAuthenticated() && 
+                     request.resource.data.diff(resource.data).affectedKeys().hasOnly(['availableCopies']) &&
+                     request.resource.data.availableCopies is number &&
+                     request.resource.data.availableCopies >= 0 &&
+                     request.resource.data.availableCopies <= resource.data.totalCopies);
+    }
+
+    // Transactions Collection
+    match /transactions/{transactionId} {
+      function isValidTransaction(data) {
+        return data.keys().hasAll(['userId', 'bookId', 'issueDate', 'dueDate', 'fineAmount', 'status']) &&
+               data.userId is string &&
+               data.bookId is string &&
+               data.fineAmount is number && data.fineAmount >= 0 &&
+               data.status in ['borrowed', 'returned', 'overdue'] &&
+               (data.issueDate is timestamp || data.issueDate is string) &&
+               (data.dueDate is timestamp || data.dueDate is string);
+      }
+
+      allow read: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+      // Users can create their own transactions (borrowing)
+      allow create: if isAuthenticated() && isValidTransaction(request.resource.data) && 
+                    (isOwner(request.resource.data.userId) || isAdmin());
+      // Users can update their own transactions (renewing/returning)
+      allow update: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin()) &&
+                    (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['dueDate', 'status', 'returnDate', 'fineAmount'])) &&
+                    (!('returnDate' in request.resource.data) || (request.resource.data.returnDate is timestamp || request.resource.data.returnDate is string));
+    }
+
+    // Reservations Collection
+    match /reservations/{reservationId} {
+      function isValidReservation(data) {
+        return data.keys().hasAll(['userId', 'bookId', 'reservationDate', 'status']) &&
+               data.userId is string &&
+               data.bookId is string &&
+               (data.reservationDate is timestamp || data.reservationDate is string) &&
+               data.status in ['pending', 'fulfilled', 'cancelled'];
+      }
+
+      allow read: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+      allow create: if isAuthenticated() && isValidReservation(request.resource.data) && 
+                    (isOwner(request.resource.data.userId) || isAdmin());
+      allow update: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin()) &&
+                    request.resource.data.status in ['pending', 'fulfilled', 'cancelled'];
+      allow delete: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+    }
+    // Notifications Collection
+    match /notifications/{notificationId} {
+      function isValidNotification(data) {
+        return data.keys().hasAll(['userId', 'bookId', 'bookTitle', 'message', 'type', 'read', 'createdAt']) &&
+               data.userId is string &&
+               data.bookId is string &&
+               data.bookTitle is string &&
+               data.message is string &&
+               data.type in ['availability', 'overdue', 'system'] &&
+               data.read is bool &&
+               (data.createdAt is string || data.createdAt is timestamp) &&
+               (!('canOneClickBorrow' in data) || data.canOneClickBorrow is bool) &&
+               (!('reservationId' in data) || data.reservationId is string);
+      }
+
+      allow read: if isAuthenticated() && isOwner(resource.data.userId);
+      allow create: if isAuthenticated() && isValidNotification(request.resource.data);
+      allow update: if isAuthenticated() && isOwner(resource.data.userId) && 
+                    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow delete: if isAuthenticated() && isOwner(resource.data.userId);
+    }
+  }
+}
