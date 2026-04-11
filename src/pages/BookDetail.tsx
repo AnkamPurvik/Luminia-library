@@ -66,8 +66,13 @@ export default function BookDetail() {
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + 14);
 
+      const userSnap = await getDoc(doc(db, 'users', user.uid));
+      const realName = userSnap.exists() ? (userSnap.data().name || userSnap.data().displayName || user.displayName) : user.displayName;
+
       await addDoc(collection(db, 'transactions'), {
         userId: user.uid,
+        userName: realName || 'Member',
+        userEmail: user.email || '',
         bookId: book.id,
         bookTitle: book.title,
         bookCover: book.coverUrl,

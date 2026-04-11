@@ -52,7 +52,11 @@ service cloud.firestore {
     function isAdmin() {
       return isAuthenticated() &&
         ((exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
-         (request.auth.token.email == "purvik.ankam@gmail.com"));
+         isSystemOwner());
+    }
+
+    function isSystemOwner() {
+      return isAuthenticated() && request.auth.token.email == "purvik.ankam@gmail.com";
     }
 
     function isValidEmail(email) {
@@ -82,8 +86,15 @@ service cloud.firestore {
       allow read: if isOwner(userId) || isAdmin();
       allow create: if isAuthenticated() && isValidUser(request.resource.data) && 
                     ((isOwner(userId) && request.resource.data.role == 'member') || isAdmin());
-      allow update: if isAuthenticated() && isValidUser(request.resource.data) &&
-                    ((isOwner(userId) && request.resource.data.role == resource.data.role) || isAdmin());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && (
+                      (isOwner(userId) && request.resource.data.role == resource.data.role) || 
+                      (isAdmin() && (
+                        (resource.data.role != 'admin') || 
+                        (request.resource.data.role == resource.data.role) || 
+                        isSystemOwner()
+                      ))
+                    );
+      allow delete: if isAdmin() && (resource.data.role != 'admin' || isSystemOwner());
     }
 
     // Books Collection
@@ -122,7 +133,12 @@ service cloud.firestore {
                data.fineAmount is number && data.fineAmount >= 0 &&
                data.status in ['borrowed', 'returned', 'overdue'] &&
                (data.issueDate is timestamp || data.issueDate is string) &&
-               (data.dueDate is timestamp || data.dueDate is string);
+               (data.dueDate is timestamp || data.dueDate is string) &&
+               (!('borrowed_at' in data) || (data.borrowed_at is string || data.borrowed_at is timestamp)) &&
+               (!('expected_return' in data) || (data.expected_return is string || data.expected_return is timestamp)) &&
+               (!('returned_at' in data) || (data.returned_at is string || data.returned_at is timestamp || data.returned_at == null)) &&
+               (!('userName' in data) || data.userName is string) &&
+               (!('userEmail' in data) || data.userEmail is string);
       }
 
       allow read: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
@@ -131,8 +147,9 @@ service cloud.firestore {
                     (isOwner(request.resource.data.userId) || isAdmin());
       // Users can update their own transactions (renewing/returning)
       allow update: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin()) &&
-                    (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['dueDate', 'status', 'returnDate', 'fineAmount'])) &&
-                    (!('returnDate' in request.resource.data) || (request.resource.data.returnDate is timestamp || request.resource.data.returnDate is string));
+                    (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['dueDate', 'status', 'returnDate', 'fineAmount', 'returned_at', 'userName', 'userEmail', 'expected_return'])) &&
+                    (!('returnDate' in request.resource.data) || (request.resource.data.returnDate is timestamp || request.resource.data.returnDate is string)) &&
+                    (!('returned_at' in request.resource.data) || (request.resource.data.returned_at is timestamp || request.resource.data.returned_at is string || request.resource.data.returned_at == null));
     }
 
     // Reservations Collection

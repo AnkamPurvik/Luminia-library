@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { auth } from '../../lib/firebase';
-import { Library, LayoutDashboard, Settings, LogOut, Search, User as UserIcon, Sparkles, ShieldCheck } from 'lucide-react';
+import { Library, LayoutDashboard, Settings, LogOut, Search, User as UserIcon, Sparkles, ShieldCheck, History } from 'lucide-react';
 import { User as FirebaseUser } from 'firebase/auth';
 
 interface NavbarProps {
@@ -18,7 +18,8 @@ export function Navbar({ user, isAdmin, isPro, searchQuery, onSearchChange }: Na
   const navItems = [
     { label: 'Catalog', path: '/', icon: Search },
     { label: 'My Dashboard', path: '/dashboard', icon: LayoutDashboard, authRequired: true },
-    { label: 'Admin', path: '/admin', icon: Settings, adminRequired: true },
+    { label: 'Admin', path: '/admin', icon: ShieldCheck, adminRequired: true },
+    { label: 'Timeline', path: '/admin/timeline', icon: History, adminRequired: true },
   ];
 
   const filteredItems = navItems.filter(item => {

@@ -2,6 +2,7 @@ import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
+import toast from 'react-hot-toast';
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
@@ -55,5 +56,6 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     path
   }
   console.error('Firestore Error: ', JSON.stringify(errInfo));
+  toast.error(`${operationType.toUpperCase()} error: ${errInfo.error}`);
   throw new Error(JSON.stringify(errInfo));
 }

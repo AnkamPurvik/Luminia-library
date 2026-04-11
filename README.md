@@ -49,10 +49,25 @@ npm run dev
 
 ---
 
+---
+
+## 📈 Changelog & Features Added Timeline
+
+| Version | Date | Milestone | Key Features Added |
+| :--- | :--- | :--- | :--- |
+| **v1.4** | **Apr 11, 2026** | **System Intelligence** | **Admin Activity Timeline**, Real-time System Logs, Activity Search/Filter. |
+| **v1.3** | Apr 04, 2026 | Deployment & Stability | GitHub Pages fix, Firestore Security Hardening, Error Handling Toast. |
+| **v1.2** | Apr 04, 2026 | Admin Precision | Time-Action Audit Log, ISBN High-Res Covers, Firebase Auth Refinement. |
+| **v1.1** | Apr 03, 2026 | UI Modernization | Centralized Search, Dynamic Navbar, Lumina Pro Integration. |
+| **v1.0** | Apr 03, 2026 | The Foundation | Initial OPAC release, User Dashboard, Firebase Backend. |
+
+---
+
 ## 🛡️ Administrative Console
 Accessing the admin console requires an account with `'admin'` role assigned in the Firestore `users` collection.
 *   **Dashboard URL**: `/admin`
-*   **Book Movement URL**: `/admin/book/:id`
+*   **Activity Timeline**: `/admin/timeline`
+*   **Movement History**: `/admin/book/:id`
 
 ---
 

@@ -44,3 +44,17 @@ export interface Reservation {
   status: 'pending' | 'fulfilled' | 'cancelled';
   isPro?: boolean;
 }
+
+export interface ActivityLog {
+  id: string;
+  type: 'user' | 'admin' | 'system' | 'member';
+  user?: {
+    name: string;
+    photoURL?: string;
+  };
+  action: string;
+  details: string;
+  metadata?: string;
+  timestamp: string;
+  status: 'SUCCESS' | 'WARNING' | 'INFO' | 'ERROR';
+}

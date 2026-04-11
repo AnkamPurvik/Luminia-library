@@ -54,10 +54,15 @@ export default function AdminBookDetail() {
         let name = data.userName;
         
         // If name is missing or generic, try to fetch from user profile
-        if (!name || name === 'Member') {
-          const userSnap = await getDoc(doc(db, 'users', data.userId));
-          if (userSnap.exists()) {
-            name = userSnap.data().name;
+        if (!name || name === 'Member' || name === 'Anonymous Member' || name === 'member') {
+          try {
+            const userSnap = await getDoc(doc(db, 'users', data.userId));
+            if (userSnap.exists()) {
+              const userData = userSnap.data();
+              name = userData.name || userData.displayName || userData.username || userData.email || 'Member';
+            }
+          } catch (e) {
+            console.error("Error fetching user name:", e);
           }
         }
 

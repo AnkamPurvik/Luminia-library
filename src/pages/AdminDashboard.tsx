@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { collection, onSnapshot, query, addDoc, updateDoc, doc, deleteDoc, where, getDoc } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../lib/firebase';
+import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
 import { Book } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -301,23 +301,33 @@ export default function AdminDashboard() {
   };
 
   const handleAdminReturn = async (transaction: any) => {
+    const tId = transaction.id;
+    const bId = transaction.bookId || transaction.bookid; // Support variations
+
+    if (!tId || !bId) {
+      toast.error('Missing core IDs for return action');
+      return;
+    }
+
     try {
-      await updateDoc(doc(db, 'transactions', transaction.id), {
+      await updateDoc(doc(db, 'transactions', tId), {
         status: 'returned',
-        returned_at: new Date().toISOString(), // Log return time
-        returnDate: new Date().toISOString() // Fallback
+        returned_at: new Date().toISOString(),
+        returnDate: new Date().toISOString()
       });
 
-      const bookRef = doc(db, 'books', transaction.bookId);
+      const bookRef = doc(db, 'books', bId);
       const bookSnap = await getDoc(bookRef);
       if (bookSnap.exists()) {
+        const bookData = bookSnap.data();
         await updateDoc(bookRef, {
-          availableCopies: (bookSnap.data().availableCopies || 0) + 1
+          availableCopies: Math.min((bookData.availableCopies || 0) + 1, bookData.totalCopies || 100)
         });
       }
-      toast.success('Book returned successfully (Admin Action)');
-    } catch (err) {
-      handleFirestoreError(err, OperationType.UPDATE, `transactions/${transaction.id}`);
+      toast.success('Book successfully returned');
+    } catch (err: any) {
+      console.error('Force Return Error:', err);
+      toast.error(`Return failed: ${err.message}`);
     }
   };
 
@@ -595,12 +605,14 @@ export default function AdminDashboard() {
                       >
                         <Activity size={18} />
                       </button>
-                      <button 
-                        onClick={() => handleUpdateUserRole(user.id, user.role)}
-                        className="px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-tight text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors border border-indigo-100"
-                      >
-                        Swap Role
-                      </button>
+                      {(user.role !== 'admin' || auth.currentUser?.email === 'purvik.ankam@gmail.com') && (
+                        <button 
+                          onClick={() => handleUpdateUserRole(user.id, user.role)}
+                          className="px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-tight text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors border border-indigo-100"
+                        >
+                          Swap Role
+                        </button>
+                      )}
                       <button 
                         onClick={() => handleTogglePro(user.id, !!user.isPro)}
                         className={`px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-tight rounded-lg transition-colors border ${
@@ -609,12 +621,14 @@ export default function AdminDashboard() {
                       >
                         {user.isPro ? 'Demote Pro' : 'Make Pro'}
                       </button>
-                      <button 
-                        onClick={() => handleDeleteUser(user.id, user.name)}
-                        className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                      >
-                        <Trash2 size={18} />
-                      </button>
+                      {(user.role !== 'admin' || auth.currentUser?.email === 'purvik.ankam@gmail.com') && auth.currentUser?.uid !== user.id && (
+                        <button 
+                          onClick={() => handleDeleteUser(user.id, user.name)}
+                          className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

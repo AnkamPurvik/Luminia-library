@@ -18,6 +18,7 @@ import AdminBookDetail from './pages/AdminBookDetail';
 import BookDetail from './pages/BookDetail';
 import LuminaPro from './pages/LuminaPro';
 import Login from './pages/Login';
+import ActivityTimeline from './pages/ActivityTimeline';
 import { Loader2 } from 'lucide-react';
 
 export default function App() {
@@ -101,6 +102,10 @@ export default function App() {
             <Route 
               path="/admin/book/:id" 
               element={isAdmin ? <AdminBookDetail /> : <Navigate to="/" />} 
+            />
+            <Route 
+              path="/admin/timeline" 
+              element={isAdmin ? <ActivityTimeline /> : <Navigate to="/" />} 
             />
             <Route path="/pro" element={<LuminaPro />} />
           </Routes>
