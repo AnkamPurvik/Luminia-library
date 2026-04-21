@@ -187,32 +187,39 @@ export function AdminSupportInbox() {
               <button
                 key={session.id}
                 onClick={() => setActiveSession(session)}
-                className={`w-full text-left p-4 border-b border-white/5 hover:bg-white/5 transition-all group border-l-2 min-h-[64px] ${
-                  activeSession?.id === session.id ? 'bg-primary-accent/5 border-l-primary-accent' : getUrgencyColor(session.urgency, session.unreadByAdmin)
+                className={`w-full text-left p-4 border-b border-white/5 hover:bg-white/5 transition-all group relative ${
+                  activeSession?.id === session.id ? 'bg-primary-accent/10' : getUrgencyColor(session.urgency, session.unreadByAdmin)
                 }`}
               >
-                <div className="flex items-start gap-3">
+                {activeSession?.id === session.id && (
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary-accent shadow-[0_0_12px_rgba(99,102,241,0.5)]" />
+                )}
+                <div className="flex items-start gap-4">
                   <div className="relative shrink-0">
-                    <div className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-primary-accent font-black text-xs">
+                    <div className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-primary-accent font-black text-sm">
                       {session.userName?.charAt(0).toUpperCase()}
                     </div>
-                    <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-bg-dark ${getUrgencyDot(session.urgency, session.unreadByAdmin)}`} />
+                    {session.status === 'open' && (
+                      <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-bg-dark ${getUrgencyDot(session.urgency, session.unreadByAdmin)}`} />
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-[11px] font-black text-white uppercase tracking-tight truncate">{session.userName}</p>
-                      {session.unreadByAdmin > 0 && (
-                        <span className="text-[9px] font-black bg-primary-accent text-white px-1.5 py-0.5 rounded-full shrink-0">
-                          {session.unreadByAdmin}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[10px] text-slate-500 truncate mt-0.5">{session.lastMessage || 'Started a conversation'}</p>
-                    <div className="flex items-center gap-1.5 mt-1">
-                      <span className={`text-[9px] font-black px-1.5 py-0.5 rounded uppercase ${session.status === 'open' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-slate-500/10 text-slate-500'}`}>
-                        {session.status}
+                      <p className="text-xs font-black text-white uppercase tracking-tight truncate">{session.userName}</p>
+                      <span className="text-[9px] font-bold text-slate-500 whitespace-nowrap">
+                        {new Date(session.lastMessageAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
+                    <p className={`text-[10px] truncate mt-0.5 ${session.unreadByAdmin > 0 ? 'text-white font-bold' : 'text-slate-500'}`}>
+                      {session.lastMessage || 'Started a conversation'}
+                    </p>
+                    {session.unreadByAdmin > 0 && (
+                      <div className="flex items-center gap-2 mt-1.5">
+                        <span className="text-[8px] font-black bg-primary-accent text-white px-2 py-0.5 rounded-full">
+                          {session.unreadByAdmin} NEW
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </button>
@@ -255,47 +262,46 @@ export function AdminSupportInbox() {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-bg-dark/50 flex flex-col">
-              {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex ${msg.senderRole === 'admin' ? 'justify-end' : 'justify-start'}`}
-                >
+            <div className="flex-1 overflow-y-auto p-6 space-y-2 custom-scrollbar bg-bg-dark/40 flex flex-col">
+              {messages.map((msg, index) => {
+                const isSameSenderAsPrev = index > 0 && messages[index - 1].senderRole === msg.senderRole;
+                return (
                   <div
-                    className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm font-semibold leading-relaxed shadow-lg ${
-                      msg.senderRole === 'admin'
-                        ? 'rounded-br-md text-white'
-                        : 'rounded-bl-md text-white bg-slate-800 border border-white/5'
-                    }`}
-                    style={
-                      msg.senderRole === 'admin'
-                        ? { background: 'linear-gradient(135deg, #6366F1, #4F46E5)', boxShadow: '0 4px 24px rgba(99,102,241,0.2)' }
-                        : { backdropFilter: 'blur(12px)' }
-                    }
+                    key={msg.id}
+                    className={`flex ${msg.senderRole === 'admin' ? 'justify-end' : 'justify-start'} ${isSameSenderAsPrev ? 'mt-1' : 'mt-4'}`}
                   >
-                    {msg.senderRole === 'user' && (
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">{msg.senderName}</p>
-                    )}
-                    <p>{msg.text}</p>
-                    <div className="flex items-center justify-between gap-4 mt-1.5">
-                      <p className={`text-[9px] flex items-center gap-1 ${msg.senderRole === 'admin' ? 'text-white/50' : 'text-slate-600'}`}>
-                        <Clock size={9} />
-                        {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </p>
-                      {msg.senderRole === 'admin' && (
-                        <div className="flex items-center gap-0.5">
-                          <Check size={8} className={msg.read ? 'text-emerald-400' : 'text-white/30'} />
-                          {msg.read && <Check size={8} className="text-emerald-400 -ml-1" />}
-                        </div>
-                      )}
+                    <div
+                      className={`max-w-[70%] group relative px-4 py-2.5 text-[13px] font-semibold shadow-xl transition-all hover:scale-[1.01] ${
+                        msg.senderRole === 'admin'
+                          ? `text-white bg-primary-accent rounded-2xl ${isSameSenderAsPrev ? 'rounded-tr-md' : 'rounded-tr-sm'}`
+                          : `text-white bg-white/5 border border-white/10 rounded-2xl ${isSameSenderAsPrev ? 'rounded-tl-md' : 'rounded-tl-sm'}`
+                      }`}
+                      style={
+                        msg.senderRole === 'admin'
+                          ? { background: 'linear-gradient(135deg, #6366F1, #4F46E5)', boxShadow: '0 4px 12px rgba(99,102,241,0.2)' }
+                          : { backdropFilter: 'blur(8px)' }
+                      }
+                    >
+                      <p className="leading-relaxed">{msg.text}</p>
+                      <div className={`flex items-center gap-1.5 mt-1 justify-end ${msg.senderRole === 'admin' ? 'text-white/60' : 'text-slate-500'}`}>
+                        <span className="text-[8px] font-bold">
+                          {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        {msg.senderRole === 'admin' && (
+                          <div className="flex items-center">
+                            <Check size={10} className={msg.read ? 'text-cyan-300' : 'text-white/40'} />
+                            {msg.read && <Check size={10} className="text-cyan-300 -ml-1.5" />}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
               {messages.length === 0 && (
-                <div className="flex flex-col items-center justify-center h-full text-center opacity-40">
-                  <User size={32} className="text-slate-600 mb-3" />
-                  <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">No messages yet</p>
+                <div className="flex flex-col items-center justify-center h-full text-center opacity-30">
+                  <User size={40} className="text-slate-600 mb-3" />
+                  <p className="text-xs font-black text-white uppercase tracking-[0.2em]">Ready for support</p>
                 </div>
               )}
               <div ref={messagesEndRef} />
