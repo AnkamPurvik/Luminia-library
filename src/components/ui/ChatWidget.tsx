@@ -9,6 +9,7 @@ import {
 } from 'firebase/firestore';
 import { db, auth } from '../../lib/firebase';
 import { ChatMessage } from '../../types';
+import toast from 'react-hot-toast';
 
 export function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
@@ -51,12 +52,14 @@ export function ChatWidget() {
 
     const q = query(
       collection(db, 'chat_messages'),
-      where('sessionId', '==', sessionId),
-      orderBy('timestamp', 'asc')
+      where('sessionId', '==', sessionId)
     );
 
     const unsub = onSnapshot(q, (snap) => {
       const msgs = snap.docs.map(d => ({ id: d.id, ...d.data() })) as ChatMessage[];
+      // Sort messages locally by timestamp to replace the removed orderBy
+      msgs.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      
       setMessages(msgs);
 
       // Count admin messages not read by user
@@ -67,10 +70,15 @@ export function ChatWidget() {
       if (isOpen) {
         snap.docs.forEach(d => {
           if (d.data().senderRole === 'admin' && !d.data().read) {
-            updateDoc(doc(db, 'chat_messages', d.id), { read: true });
+            updateDoc(doc(db, 'chat_messages', d.id), { read: true }).catch(console.error);
           }
         });
         setUnreadCount(0);
+      }
+    }, (error) => {
+      console.error("Chat subscription error:", error);
+      if (error.code === 'permission-denied') {
+        toast.error("Chat permission denied. Please re-login.");
       }
     });
 
@@ -112,6 +120,7 @@ export function ChatWidget() {
       });
     } catch (err) {
       console.error('Chat send error:', err);
+      toast.error('Failed to send message');
     } finally {
       setIsSending(false);
       // Re-focus input on mobile

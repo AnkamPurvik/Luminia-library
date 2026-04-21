@@ -27,6 +27,8 @@ export function AdminSupportInbox() {
     );
     const unsub = onSnapshot(q, (snap) => {
       setSessions(snap.docs.map(d => ({ id: d.id, ...d.data() })) as ChatSession[]);
+    }, (err) => {
+      console.error("Sessions snapshot error:", err);
     });
     return () => unsub();
   }, []);
@@ -37,20 +39,24 @@ export function AdminSupportInbox() {
 
     const q = query(
       collection(db, 'chat_messages'),
-      where('sessionId', '==', activeSession.id),
-      orderBy('timestamp', 'asc')
+      where('sessionId', '==', activeSession.id)
     );
 
     const unsub = onSnapshot(q, (snap) => {
-      setMessages(snap.docs.map(d => ({ id: d.id, ...d.data() })) as ChatMessage[]);
+      const msgs = snap.docs.map(d => ({ id: d.id, ...d.data() })) as ChatMessage[];
+      // Sort locally
+      msgs.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      setMessages(msgs);
       // Mark all user messages as read
       snap.docs.forEach(d => {
         if (d.data().senderRole === 'user' && !d.data().read) {
-          updateDoc(doc(db, 'chat_messages', d.id), { read: true });
+          updateDoc(doc(db, 'chat_messages', d.id), { read: true }).catch(console.error);
         }
       });
       // Reset unread count on session
-      updateDoc(doc(db, 'chat_sessions', activeSession.id), { unreadByAdmin: 0 });
+      updateDoc(doc(db, 'chat_sessions', activeSession.id), { unreadByAdmin: 0 }).catch(console.error);
+    }, (err) => {
+      console.error("Messages snapshot error:", err);
     });
 
     return () => unsub();
