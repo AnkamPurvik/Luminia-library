@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  MessageCircle, X, Send, Loader2, MinimizeIcon, ChevronDown, Check
+  MessageCircle, X, Send, Loader2, MinimizeIcon, ChevronDown, Check,
+  Plus, Smile, Zap, BookOpen, Clock, Info, User, Phone, MoreVertical
 } from 'lucide-react';
 import {
   collection, addDoc, onSnapshot, query,
-  where, orderBy, updateDoc, doc, setDoc, getDoc
+  where, orderBy, updateDoc, doc, setDoc, getDoc, getDocs
 } from 'firebase/firestore';
 import { db, auth, logActivity } from '../../lib/firebase';
 import { ChatMessage } from '../../types';
@@ -140,6 +141,64 @@ export function ChatWidget() {
     }
   };
 
+  const handleQuickAction = async (action: string) => {
+    if (!user || !sessionId || isSending) return;
+    
+    // Send the user's "message" (the button text)
+    await addDoc(collection(db, 'chat_messages'), {
+      sessionId,
+      senderId: user.uid,
+      senderName: user.displayName || 'Member',
+      senderRole: 'user',
+      text: action,
+      timestamp: new Date().toISOString(),
+      read: false
+    });
+
+    // Determine auto-reply
+    let autoReply = "";
+    switch (action) {
+      case "CHECK LOAN STATUS":
+        const q = query(collection(db, 'transactions'), where('userId', '==', user.uid), where('status', '==', 'borrowed'));
+        const snap = await getDocs(q);
+        const count = snap.size;
+        const nextDue = snap.docs.length > 0 
+          ? new Date(snap.docs[0].data().dueDate).toLocaleDateString()
+          : "N/A";
+        autoReply = `Checking... You currently have ${count} books out. Your next return is due on ${nextDue}.`;
+        break;
+      case "TALK TO HUMAN":
+        autoReply = "I've alerted the admin. A librarian will be with you shortly. Current wait time: ~5 mins.";
+        await updateDoc(doc(db, 'chat_sessions', sessionId), { urgency: 'high' });
+        break;
+      case "LIBRARY HOURS":
+        autoReply = "We are open Mon-Fri, 9AM - 6PM EST. On weekends, we are open for digital downloads only.";
+        break;
+      case "LUMINA PRO PERKS":
+        autoReply = "Lumina Pro members get unlimited renewals and early access to 'High Heat' titles. Would you like to see the upgrade options?";
+        break;
+    }
+
+    if (autoReply) {
+      // Simulate typing delay
+      setTimeout(async () => {
+        await addDoc(collection(db, 'chat_messages'), {
+          sessionId,
+          senderId: 'system-bot',
+          senderName: 'Luminia AI',
+          senderRole: 'admin',
+          text: autoReply,
+          timestamp: new Date().toISOString(),
+          read: false
+        });
+      }, 800);
+    }
+  };
+
+  const handleClose = () => {
+    setIsOpen(false);
+  };
+
   const handleOpen = () => {
     setIsOpen(true);
     setIsMinimized(false);
@@ -178,7 +237,7 @@ export function ChatWidget() {
             />
 
             {/* Header */}
-            <div className="relative z-10 p-5 border-b border-white/10 flex items-center justify-between"
+            <div className="relative z-10 p-5 border-b border-white/10 flex items-center justify-between h-16"
               style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.12), rgba(8,8,10,0.95))' }}
             >
               <div className="flex items-center gap-3">
@@ -186,7 +245,7 @@ export function ChatWidget() {
                   <div className="w-9 h-9 rounded-xl bg-primary-accent/20 flex items-center justify-center border border-primary-accent/30">
                     <MessageCircle size={18} className="text-primary-accent" />
                   </div>
-                  <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-emerald-500 border-2 border-[#08080A] animate-pulse" />
+                  <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-[#08080A] animate-pulse ${session?.status === 'open' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
                 </div>
                 <div>
                   <p className="text-xs font-black text-white uppercase tracking-widest">Luminia Support</p>
@@ -198,71 +257,85 @@ export function ChatWidget() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setIsMinimized(true)}
-                  className="p-2 text-slate-500 hover:text-white hover:bg-white/10 rounded-xl transition-all min-h-[40px] min-w-[40px] flex items-center justify-center"
+                  className="p-2 text-slate-500 hover:text-white hover:bg-white/10 rounded-xl transition-all"
                 >
-                  <MinimizeIcon size={14} />
+                  <ChevronDown size={18} />
                 </button>
                 <button
-                  onClick={() => setIsOpen(false)}
-                  className="p-2 text-slate-500 hover:text-white hover:bg-white/10 rounded-xl transition-all min-h-[40px] min-w-[40px] flex items-center justify-center"
+                  onClick={handleClose}
+                  className="p-2 text-slate-500 hover:text-white hover:bg-white/10 rounded-xl transition-all"
                 >
-                  <X size={16} />
+                  <X size={18} />
                 </button>
               </div>
             </div>
 
-            {/* Messages — flex-col-reverse on mobile for keyboard proximity */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar relative z-10 flex flex-col">
-              {messages.length === 0 && (
-                <div className="flex flex-col items-center justify-center flex-1 text-center opacity-50">
-                  <div className="w-16 h-16 rounded-2xl bg-primary-accent/10 flex items-center justify-center mb-4 border border-primary-accent/20">
-                    <MessageCircle size={28} className="text-primary-accent" />
-                  </div>
-                  <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Start a conversation</p>
-                  <p className="text-[10px] text-slate-600 font-bold mt-1">Our team usually replies within minutes</p>
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar relative z-10 flex flex-col bg-[#08080A]">
+               <div className="flex justify-center my-2">
+                <div className="px-4 py-1 bg-white/5 border border-white/5 rounded-full text-[9px] font-black text-slate-500 uppercase tracking-widest">
+                  Today, {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </div>
-              )}
-              <div className="flex-1" />
-              {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex ${msg.senderRole === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm font-semibold leading-relaxed shadow-lg ${
-                      msg.senderRole === 'user'
-                        ? 'rounded-br-md text-white'
-                        : 'rounded-bl-md text-white bg-[#1E293B] border border-white/10'
-                    }`}
-                    style={
-                      msg.senderRole === 'user'
-                        ? { background: 'linear-gradient(135deg, #6366F1, #4F46E5)', boxShadow: '0 4px 24px rgba(99,102,241,0.3)' }
-                        : {}
-                    }
-                  >
-                    {msg.senderRole === 'admin' && (
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">{msg.senderName}</p>
+              </div>
+              {messages.map((msg, index) => {
+                const isSameSenderAsPrev = index > 0 && messages[index - 1].senderRole === msg.senderRole;
+                const timeStr = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                return (
+                  <div key={msg.id} className={`flex flex-col ${msg.senderRole === 'user' ? 'items-end' : 'items-start'} ${isSameSenderAsPrev ? 'mt-1' : 'mt-6'}`}>
+                    {!isSameSenderAsPrev && (
+                      <div className="flex items-center gap-2 mb-1.5 px-1">
+                        <span className="text-[10px] font-black text-white uppercase tracking-tight">
+                          {msg.senderRole === 'admin' ? 'Support Agent' : 'You'}
+                        </span>
+                        <span className="text-[9px] font-bold text-slate-600 uppercase">{timeStr}</span>
+                      </div>
                     )}
-                    <p>{msg.text}</p>
-                    <div className="flex items-center justify-between gap-4 mt-1.5">
-                      <p className={`text-[9px] ${msg.senderRole === 'user' ? 'text-white/50' : 'text-slate-600'}`}>
-                        {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </p>
+                    
+                    <div className="max-w-[80%] group relative">
+                       <div
+                        className={`px-5 py-3 text-[13px] font-semibold leading-relaxed shadow-xl transition-all hover:scale-[1.01] text-white ${
+                          msg.senderRole === 'user'
+                            ? `bg-primary-accent rounded-3xl ${isSameSenderAsPrev ? 'rounded-tr-md' : 'rounded-tr-sm'}`
+                            : `bg-white/5 border border-white/10 rounded-3xl ${isSameSenderAsPrev ? 'rounded-tl-md' : 'rounded-tl-sm'}`
+                        }`}
+                        style={
+                          msg.senderRole === 'user'
+                            ? { background: 'linear-gradient(135deg, #6366F1, #4F46E5)', boxShadow: '0 4px 12px rgba(99,102,241,0.2)' }
+                            : { backdropFilter: 'blur(12px)' }
+                        }
+                      >
+                        {msg.text}
+                      </div>
                       {msg.senderRole === 'user' && (
-                        <div className="flex items-center gap-0.5">
-                          <Check size={8} className={msg.read ? 'text-emerald-400' : 'text-white/30'} />
-                          {msg.read && <Check size={8} className="text-emerald-400 -ml-1" />}
+                        <div className="flex items-center gap-1 justify-end mt-1">
+                           <Check size={10} className={msg.read ? 'text-emerald-400' : 'text-white/20'} />
+                           {msg.read && <Check size={10} className="text-emerald-400 -ml-1.5" />}
                         </div>
                       )}
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input — stays above keyboard on mobile */}
-            <div className="relative z-10 p-4 border-t border-white/10 bg-white/[0.02] sticky bottom-0">
+            {/* Input & Quick Actions */}
+            <div className="relative z-10 p-4 border-t border-white/10 bg-white/[0.02] sticky bottom-0 space-y-4">
+               {session?.status === 'open' && (
+                <div className="flex gap-2 overflow-x-auto no-scrollbar">
+                  {["CHECK LOAN STATUS", "TALK TO HUMAN", "LIBRARY HOURS", "LUMINA PRO PERKS"].map((action, i) => (
+                    <button 
+                      key={i} 
+                      onClick={() => handleQuickAction(action)} 
+                      className="px-4 py-2 bg-white/5 border border-white/10 rounded-full text-[9px] font-black text-slate-400 hover:text-white hover:border-primary-accent/40 active:bg-primary-accent transition-all whitespace-nowrap uppercase tracking-widest"
+                    >
+                      {action}
+                    </button>
+                  ))}
+                </div>
+              )}
+
               {session?.status === 'closed' ? (
                 <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-4 text-center">
                    <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest">This conversation has been closed by an admin.</p>
@@ -270,13 +343,6 @@ export function ChatWidget() {
                     onClick={async () => {
                       await updateDoc(doc(db, 'chat_sessions', user.uid), { status: 'open', lastMessageAt: new Date().toISOString() });
                       toast.success("Chat reopened");
-                      await logActivity({
-                        type: 'chat',
-                        user: { name: user.displayName || 'Member' },
-                        action: 'Reopened Support Chat',
-                        details: `User continued conversation.`,
-                        status: 'INFO'
-                      });
                     }}
                     className="text-[9px] font-black text-primary-accent uppercase tracking-widest mt-2 hover:underline"
                    >
@@ -284,26 +350,35 @@ export function ChatWidget() {
                    </button>
                 </div>
               ) : (
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-3xl p-1.5 pl-4 focus-within:ring-2 focus-within:ring-primary-accent/30 transition-all">
+                   <button className="p-2 text-slate-500 hover:text-white">
+                    <Plus size={18} />
+                  </button>
                   <input
                     ref={inputRef}
                     type="text"
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
-                    placeholder="Type a message..."
-                    className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-2xl text-sm font-semibold text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-primary-accent/30 focus:border-primary-accent/40 transition-all min-h-[48px]"
+                    placeholder="Type your message..."
+                    className="flex-1 bg-transparent border-none text-sm font-semibold text-white placeholder-slate-600 focus:outline-none py-2"
                   />
+                  <button className="p-2 text-slate-500 hover:text-white">
+                    <Smile size={18} />
+                  </button>
                   <button
                     onClick={handleSend}
                     disabled={!inputText.trim() || isSending}
-                    className="w-12 h-12 flex items-center justify-center text-white rounded-2xl hover:bg-indigo-500 disabled:opacity-40 transition-all active:scale-95 shadow-lg shadow-indigo-500/30 shrink-0"
+                    className="w-10 h-10 flex items-center justify-center text-white rounded-2xl hover:bg-indigo-500 disabled:opacity-40 transition-all active:scale-95 shadow-lg shadow-indigo-500/30 shrink-0"
                     style={{ background: 'linear-gradient(135deg, #6366F1, #4F46E5)' }}
                   >
                     {isSending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
                   </button>
                 </div>
               )}
+              <p className={`text-[9px] text-center font-black uppercase tracking-widest transition-colors ${session?.status === 'open' ? 'text-emerald-400' : 'text-slate-600'}`}>
+                {session?.status === 'open' ? 'Our team is available & online now' : 'Our team is available Mon-Fri, 9am - 6pm EST'}
+              </p>
             </div>
           </motion.div>
         )}
