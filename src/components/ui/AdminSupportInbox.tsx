@@ -352,15 +352,8 @@ export function AdminSupportInbox() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Quick Actions & Input */}
-            <div className="p-4 border-t border-white/5 bg-white/[0.02] shrink-0 space-y-4">
-              <div className="flex gap-2 overflow-x-auto no-scrollbar">
-                {["Check loan status", "Talk to human", "Library hours", "Lumina Pro perks"].map((action, i) => (
-                  <button key={i} onClick={() => setInputText(action)} className="px-4 py-2 bg-white/5 border border-white/10 rounded-full text-[10px] font-black text-slate-400 hover:text-white hover:border-primary-accent/40 transition-all whitespace-nowrap uppercase tracking-widest">
-                    {action}
-                  </button>
-                ))}
-              </div>
+            {/* Input Bar */}
+            <div className="p-4 border-t border-white/5 bg-white/[0.02] shrink-0">
 
               <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-3xl p-1.5 pl-4 focus-within:ring-2 focus-within:ring-primary-accent/30 transition-all">
                 <button className="p-2 text-slate-500 hover:text-white">

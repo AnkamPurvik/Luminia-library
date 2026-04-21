@@ -237,33 +237,34 @@ export function ChatWidget() {
             />
 
             {/* Header */}
-            <div className="relative z-10 p-5 border-b border-white/10 flex items-center justify-between h-16"
-              style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.12), rgba(8,8,10,0.95))' }}
+            <div className="relative z-10 p-4 border-b border-white/10 flex items-center justify-between h-16 shrink-0"
+              style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.08), rgba(8,8,10,0.98))' }}
             >
               <div className="flex items-center gap-3">
                 <div className="relative">
-                  <div className="w-9 h-9 rounded-xl bg-primary-accent/20 flex items-center justify-center border border-primary-accent/30">
-                    <MessageCircle size={18} className="text-primary-accent" />
+                  <div className="w-10 h-10 rounded-2xl bg-primary-accent/10 flex items-center justify-center border border-primary-accent/20 text-primary-accent font-black text-sm">
+                    L
                   </div>
-                  <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-[#08080A] animate-pulse ${session?.status === 'open' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                  <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#08080A] ${session?.status === 'open' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
                 </div>
                 <div>
-                  <p className="text-xs font-black text-white uppercase tracking-widest">Luminia Support</p>
-                  <p className={`text-[9px] font-black uppercase tracking-widest ${session?.status === 'open' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  <p className="text-sm font-black text-white uppercase tracking-tight">Luminia Support</p>
+                  <p className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 ${session?.status === 'open' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    <span className={`w-1 h-1 rounded-full ${session?.status === 'open' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
                     {session?.status === 'open' ? 'Online' : 'Offline'}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
                 <button
                   onClick={() => setIsMinimized(true)}
-                  className="p-2 text-slate-500 hover:text-white hover:bg-white/10 rounded-xl transition-all"
+                  className="p-2 text-slate-500 hover:text-white hover:bg-white/5 rounded-xl transition-all"
                 >
                   <ChevronDown size={18} />
                 </button>
                 <button
                   onClick={handleClose}
-                  className="p-2 text-slate-500 hover:text-white hover:bg-white/10 rounded-xl transition-all"
+                  className="p-2 text-slate-500 hover:text-white hover:bg-white/5 rounded-xl transition-all"
                 >
                   <X size={18} />
                 </button>
