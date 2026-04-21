@@ -8,7 +8,7 @@ import {
   collection, onSnapshot, query, orderBy,
   addDoc, updateDoc, doc, where
 } from 'firebase/firestore';
-import { db, auth } from '../../lib/firebase';
+import { db, auth, logActivity } from '../../lib/firebase';
 import { ChatSession, ChatMessage } from '../../types';
 
 export function AdminSupportInbox() {
@@ -47,14 +47,16 @@ export function AdminSupportInbox() {
       // Sort locally
       msgs.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
       setMessages(msgs);
-      // Mark all user messages as read
-      snap.docs.forEach(d => {
-        if (d.data().senderRole === 'user' && !d.data().read) {
-          updateDoc(doc(db, 'chat_messages', d.id), { read: true }).catch(console.error);
-        }
-      });
-      // Reset unread count on session
-      updateDoc(doc(db, 'chat_sessions', activeSession.id), { unreadByAdmin: 0 }).catch(console.error);
+      // Mark all user messages as read when admin sees them
+      if (activeSession) {
+        snap.docs.forEach(d => {
+          if (d.data().senderRole === 'user' && !d.data().read) {
+            updateDoc(doc(db, 'chat_messages', d.id), { read: true }).catch(console.error);
+          }
+        });
+        // Reset unread count on session
+        updateDoc(doc(db, 'chat_sessions', activeSession.id), { unreadByAdmin: 0 }).catch(console.error);
+      }
     }, (err) => {
       console.error("Messages snapshot error:", err);
     });
@@ -89,6 +91,15 @@ export function AdminSupportInbox() {
         lastMessage: text,
         lastMessageAt: new Date().toISOString()
       });
+
+      // Log activity
+      await logActivity({
+        type: 'admin',
+        user: { name: auth.currentUser?.displayName || 'Admin' },
+        action: `Support Reply to ${activeSession.userName}`,
+        details: `Session ID: ${activeSession.id}`,
+        status: 'INFO'
+      });
     } finally {
       setIsSending(false);
     }
@@ -109,6 +120,15 @@ export function AdminSupportInbox() {
   const handleCloseSession = async (sessionId: string) => {
     await updateDoc(doc(db, 'chat_sessions', sessionId), { status: 'closed' });
     if (activeSession?.id === sessionId) setActiveSession(null);
+    
+    // Log activity
+    await logActivity({
+      type: 'admin',
+      user: { name: auth.currentUser?.displayName || 'Admin' },
+      action: `Closed Support Session: ${sessionId}`,
+      details: `Support query resolved for user.`,
+      status: 'SUCCESS'
+    });
   };
 
   const getUrgencyColor = (urgency: string, unread: number) => {
@@ -242,15 +262,15 @@ export function AdminSupportInbox() {
                   className={`flex ${msg.senderRole === 'admin' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-[75%] rounded-2xl px-4 py-3 text-sm font-semibold leading-relaxed ${
+                    className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm font-semibold leading-relaxed shadow-lg ${
                       msg.senderRole === 'admin'
                         ? 'rounded-br-md text-white'
-                        : 'rounded-bl-md bg-[#1E293B] text-white border border-white/10'
+                        : 'rounded-bl-md text-white bg-slate-800 border border-white/5'
                     }`}
                     style={
                       msg.senderRole === 'admin'
-                        ? { background: 'linear-gradient(135deg, #6366F1, #4F46E5)', boxShadow: '0 4px 24px rgba(99,102,241,0.25)' }
-                        : {}
+                        ? { background: 'linear-gradient(135deg, #6366F1, #4F46E5)', boxShadow: '0 4px 24px rgba(99,102,241,0.2)' }
+                        : { backdropFilter: 'blur(12px)' }
                     }
                   >
                     {msg.senderRole === 'user' && (

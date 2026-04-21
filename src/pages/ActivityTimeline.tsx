@@ -5,16 +5,15 @@ import {
   Search, Filter, Library, LayoutDashboard, Shield, 
   History, Settings, LogOut, CheckCircle2, AlertTriangle, 
   Info, XCircle, User, BookOpen, UserPlus, Database,
-  ArrowRight, Loader2
+  ArrowRight, Loader2, MessageSquare
 } from 'lucide-react';
 import { collection, query, orderBy, onSnapshot, limit } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import { ActivityLog } from '../types';
 import toast from 'react-hot-toast';
 
-export default function ActivityTimeline() {
+export default function ActivityTimeline({ searchQuery = '' }: { searchQuery?: string }) {
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState('');
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const user = auth.currentUser;
@@ -55,7 +54,8 @@ export default function ActivityTimeline() {
   const filteredLogs = logs.filter(log => 
     log.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
     log.details.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    log.user?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+    log.user?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    log.type.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const getStatusStyles = (status: ActivityLog['status']) => {
@@ -68,11 +68,23 @@ export default function ActivityTimeline() {
     }
   };
 
+  const getTypeStyles = (type: string) => {
+    switch (type) {
+      case 'chat': return 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20';
+      case 'admin': return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+      case 'system': return 'bg-rose-500/10 text-rose-400 border-rose-500/20';
+      default: return 'bg-white/5 text-slate-400 border-white/10';
+    }
+  };
+
   const getIcon = (log: ActivityLog) => {
     if (log.status === 'SUCCESS') return <CheckCircle2 size={16} className="text-white" />;
     if (log.status === 'WARNING') return <AlertTriangle size={16} className="text-white" />;
     if (log.status === 'ERROR') return <XCircle size={16} className="text-white" />;
-    if (log.status === 'INFO') return <Info size={16} className="text-white" />;
+    if (log.status === 'INFO') {
+      if (log.type === 'chat') return <MessageSquare size={16} className="text-white" />;
+      return <Info size={16} className="text-white" />;
+    }
     return <Info size={16} className="text-white" />;
   };
 
@@ -80,7 +92,7 @@ export default function ActivityTimeline() {
     switch (status) {
       case 'SUCCESS': return 'bg-emerald-500';
       case 'WARNING': return 'bg-amber-400';
-      case 'INFO': return 'bg-blue-500';
+      case 'INFO': return log.type === 'chat' ? 'bg-indigo-500' : 'bg-blue-500';
       case 'ERROR': return 'bg-rose-500';
       default: return 'bg-slate-500';
     }
@@ -156,6 +168,7 @@ export default function ActivityTimeline() {
                       {log.type === 'member' && <span className="text-emerald-400">New Member</span>}
                       {log.type === 'user' && <span className="text-slate-400">User: <span className="text-white">{log.user?.name}</span></span>}
                       {log.type === 'admin' && <span className="text-slate-400">Admin: <span className="text-white">{log.user?.name}</span></span>}
+                      {log.type === 'chat' && <span className="text-indigo-400">Support: <span className="text-white">{log.user?.name}</span></span>}
                       {log.type === 'system' && <span className="text-rose-400">{log.action}</span>}
                     </h3>
                     {log.type !== 'system' && <p className="text-slate-200 text-sm font-bold uppercase tracking-tight">{log.action}</p>}

@@ -7,7 +7,7 @@ import {
   collection, addDoc, onSnapshot, query,
   where, orderBy, updateDoc, doc, setDoc, getDoc
 } from 'firebase/firestore';
-import { db, auth } from '../../lib/firebase';
+import { db, auth, logActivity } from '../../lib/firebase';
 import { ChatMessage } from '../../types';
 import toast from 'react-hot-toast';
 
@@ -16,6 +16,7 @@ export function ChatWidget() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [session, setSession] = useState<any>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isMinimized, setIsMinimized] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -28,7 +29,7 @@ export function ChatWidget() {
     if (!isOpen || !user) return;
 
     const sessionRef = doc(db, 'chat_sessions', user.uid);
-    getDoc(sessionRef).then(async (snap) => {
+    const unsub = onSnapshot(sessionRef, async (snap) => {
       if (!snap.exists()) {
         await setDoc(sessionRef, {
           userId: user.uid,
@@ -41,9 +42,20 @@ export function ChatWidget() {
           urgency: 'low',
           createdAt: new Date().toISOString()
         });
+        // Log new session
+        await logActivity({
+          type: 'chat',
+          user: { name: user.displayName || 'Member' },
+          action: 'Started Support Chat',
+          details: `User requested assistance. Session: ${user.uid}`,
+          status: 'INFO'
+        });
+      } else {
+        setSession({ id: snap.id, ...snap.data() });
+        setSessionId(snap.id);
       }
-      setSessionId(user.uid);
     });
+    return () => unsub();
   }, [isOpen, user]);
 
   // Subscribe to messages
@@ -178,7 +190,9 @@ export function ChatWidget() {
                 </div>
                 <div>
                   <p className="text-xs font-black text-white uppercase tracking-widest">Luminia Support</p>
-                  <p className="text-[9px] text-emerald-400 font-black uppercase tracking-widest">Online</p>
+                  <p className={`text-[9px] font-black uppercase tracking-widest ${session?.status === 'open' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    {session?.status === 'open' ? 'Online' : 'Offline'}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -249,25 +263,47 @@ export function ChatWidget() {
 
             {/* Input — stays above keyboard on mobile */}
             <div className="relative z-10 p-4 border-t border-white/10 bg-white/[0.02] sticky bottom-0">
-              <div className="flex items-center gap-3">
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
-                  placeholder="Type a message..."
-                  className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-2xl text-sm font-semibold text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-primary-accent/30 focus:border-primary-accent/40 transition-all min-h-[48px]"
-                />
-                <button
-                  onClick={handleSend}
-                  disabled={!inputText.trim() || isSending}
-                  className="w-12 h-12 flex items-center justify-center text-white rounded-2xl hover:bg-indigo-500 disabled:opacity-40 transition-all active:scale-95 shadow-lg shadow-indigo-500/30 shrink-0"
-                  style={{ background: 'linear-gradient(135deg, #6366F1, #4F46E5)' }}
-                >
-                  {isSending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-                </button>
-              </div>
+              {session?.status === 'closed' ? (
+                <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-4 text-center">
+                   <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest">This conversation has been closed by an admin.</p>
+                   <button 
+                    onClick={async () => {
+                      await updateDoc(doc(db, 'chat_sessions', user.uid), { status: 'open', lastMessageAt: new Date().toISOString() });
+                      toast.success("Chat reopened");
+                      await logActivity({
+                        type: 'chat',
+                        user: { name: user.displayName || 'Member' },
+                        action: 'Reopened Support Chat',
+                        details: `User continued conversation.`,
+                        status: 'INFO'
+                      });
+                    }}
+                    className="text-[9px] font-black text-primary-accent uppercase tracking-widest mt-2 hover:underline"
+                   >
+                    Reopen Chat
+                   </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={inputText}
+                    onChange={(e) => setInputText(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
+                    placeholder="Type a message..."
+                    className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-2xl text-sm font-semibold text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-primary-accent/30 focus:border-primary-accent/40 transition-all min-h-[48px]"
+                  />
+                  <button
+                    onClick={handleSend}
+                    disabled={!inputText.trim() || isSending}
+                    className="w-12 h-12 flex items-center justify-center text-white rounded-2xl hover:bg-indigo-500 disabled:opacity-40 transition-all active:scale-95 shadow-lg shadow-indigo-500/30 shrink-0"
+                    style={{ background: 'linear-gradient(135deg, #6366F1, #4F46E5)' }}
+                  >
+                    {isSending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                  </button>
+                </div>
+              )}
             </div>
           </motion.div>
         )}

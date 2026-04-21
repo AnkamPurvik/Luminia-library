@@ -126,7 +126,7 @@ export default function App() {
                 />
                 <Route 
                   path="/admin/timeline" 
-                  element={isAdmin ? <ActivityTimeline /> : <Navigate to="/" />} 
+                  element={isAdmin ? <ActivityTimeline searchQuery={searchQuery} /> : <Navigate to="/" />} 
                 />
                 <Route path="/pro" element={<LuminaPro />} />
                 <Route path="/settings" element={<Settings />} />
