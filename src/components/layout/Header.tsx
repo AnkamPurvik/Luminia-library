@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, Clock, Sparkles, ShieldCheck } from 'lucide-react';
 import { UserProfile } from '../../types';
 
@@ -10,6 +11,7 @@ interface HeaderProps {
 
 export function Header({ profile, searchQuery, onSearchChange }: HeaderProps) {
   const [time, setTime] = useState(new Date());
+  const navigate = useNavigate();
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
@@ -73,8 +75,11 @@ export function Header({ profile, searchQuery, onSearchChange }: HeaderProps) {
             </div>
           </div>
         ) : (
-          <button className="bg-primary-accent text-white px-8 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary-accent/20">
-            Link Identity
+          <button 
+            onClick={() => navigate('/login')}
+            className="bg-primary-accent text-white px-8 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary-accent/20"
+          >
+            Login
           </button>
         )}
       </div>

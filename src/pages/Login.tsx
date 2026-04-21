@@ -84,12 +84,12 @@ export default function Login() {
 
           <header className="mb-10">
             <h1 className="text-5xl font-black text-white mb-4 leading-tight tracking-tighter uppercase">
-              {isLogin ? 'Access Core' : 'Initialize'}
+              {isLogin ? 'Login' : 'Sign Up'}
             </h1>
             <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">
               {isLogin 
-                ? 'Authenticate credentials to sync with your library core.' 
-                : 'Join the global network and start your collection sync today.'}
+                ? 'Enter your credentials to access your library account.' 
+                : 'Create a new account to get started.'}
             </p>
           </header>
 
@@ -101,7 +101,7 @@ export default function Login() {
                 isLogin ? 'bg-primary-accent text-white shadow-lg shadow-primary-accent/20' : 'text-slate-500 hover:text-slate-300'
               }`}
             >
-              Sign In
+              Login
             </button>
             <button 
               onClick={() => setIsLogin(false)}
@@ -109,14 +109,14 @@ export default function Login() {
                 !isLogin ? 'bg-primary-accent text-white shadow-lg shadow-primary-accent/20' : 'text-slate-500 hover:text-slate-300'
               }`}
             >
-              Initialize
+              Sign Up
             </button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {!isLogin && (
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em] px-1">Full Identity</label>
+                <label className="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em] px-1">Full Name</label>
                 <div className="relative group">
                   <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-500 group-focus-within:text-primary-accent transition-colors">
                     <User size={18} />
@@ -186,7 +186,7 @@ export default function Login() {
                 <Loader2 className="animate-spin" size={18} />
               ) : (
                 <>
-                  {isLogin ? 'Establish Link' : 'Generate Identity'}
+                  {isLogin ? 'Login' : 'Sign Up'}
                   <ArrowRight size={16} className="group-hover:translate-x-2 transition-transform" />
                 </>
               )}
