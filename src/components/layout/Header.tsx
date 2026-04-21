@@ -21,8 +21,8 @@ export function Header({ profile, searchQuery, onSearchChange }: HeaderProps) {
   return (
     <header className="h-16 md:h-24 bg-bg-dark/50 backdrop-blur-3xl border-b border-white/5 flex items-center justify-between px-4 md:px-10 sticky top-0 z-40 transition-all">
       <div className="flex-1 max-w-2xl">
-        <div className="relative group">
-          <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary-accent transition-colors" size={18} />
+        <div className="relative group transition-all">
+          <Search className="absolute left-4 md:left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary-accent transition-colors" size={16} />
           <input 
             type="text" 
             placeholder="Search catalog..."

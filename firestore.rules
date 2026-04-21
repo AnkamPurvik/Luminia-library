@@ -147,7 +147,7 @@ service cloud.firestore {
                     (isOwner(request.resource.data.userId) || isAdmin());
       // Users can update their own transactions (renewing/returning)
       allow update: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin()) &&
-                    (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['dueDate', 'status', 'returnDate', 'fineAmount', 'returned_at', 'userName', 'userEmail', 'expected_return'])) &&
+                    (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['dueDate', 'status', 'returnDate', 'fineAmount', 'returned_at', 'userName', 'userEmail', 'expected_return', 'updated_due_date', 'original_due_date'])) &&
                     (!('returnDate' in request.resource.data) || (request.resource.data.returnDate is timestamp || request.resource.data.returnDate is string)) &&
                     (!('returned_at' in request.resource.data) || (request.resource.data.returned_at is timestamp || request.resource.data.returned_at is string || request.resource.data.returned_at == null));
     }
@@ -172,14 +172,14 @@ service cloud.firestore {
     // Notifications Collection
     match /notifications/{notificationId} {
       function isValidNotification(data) {
-        return data.keys().hasAll(['userId', 'bookId', 'bookTitle', 'message', 'type', 'read', 'createdAt']) &&
+        return data.keys().hasAll(['userId', 'message', 'type', 'read', 'createdAt']) &&
                data.userId is string &&
-               data.bookId is string &&
-               data.bookTitle is string &&
                data.message is string &&
-               data.type in ['availability', 'overdue', 'system'] &&
+               data.type in ['availability', 'overdue', 'system', 'update'] &&
                data.read is bool &&
                (data.createdAt is string || data.createdAt is timestamp) &&
+               (!('bookId' in data) || data.bookId is string) &&
+               (!('bookTitle' in data) || data.bookTitle is string) &&
                (!('canOneClickBorrow' in data) || data.canOneClickBorrow is bool) &&
                (!('reservationId' in data) || data.reservationId is string);
       }

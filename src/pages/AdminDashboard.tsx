@@ -956,17 +956,17 @@ export default function AdminDashboard() {
               exit={{ opacity: 0, scale: 0.95, y: 30 }}
               className="relative w-full max-w-4xl bg-surface-dark border border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
             >
-              <div className="p-8 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
-                <div className="flex items-center gap-6">
-                   <div className="h-16 w-16 bg-primary-accent/10 border border-primary-accent/20 rounded-2xl flex items-center justify-center text-primary-accent font-black text-2xl shadow-inner">
+              <div className="p-6 sm:p-8 border-b border-white/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 bg-white/[0.02]">
+                <div className="flex items-center gap-4 sm:gap-6">
+                   <div className="h-12 w-12 sm:h-16 sm:w-16 bg-primary-accent/10 border border-primary-accent/20 rounded-2xl flex items-center justify-center text-primary-accent font-black text-xl sm:text-2xl shadow-inner shrink-0">
                     {selectedUser.name?.charAt(0)}
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <div className="flex items-center gap-3">
-                      <h3 className="text-2xl font-black text-white uppercase tracking-tighter">{selectedUser.name}</h3>
-                      {selectedUser.isPro && <Sparkles size={18} className="text-amber-400 fill-amber-400 animate-pulse" />}
+                      <h3 className="text-xl sm:text-2xl font-black text-white uppercase tracking-tighter truncate">{selectedUser.name}</h3>
+                      {selectedUser.isPro && <Sparkles size={18} className="text-amber-400 fill-amber-400 animate-pulse shrink-0" />}
                     </div>
-                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mt-1">{selectedUser.email}</p>
+                    <p className="text-[9px] text-slate-500 font-black uppercase tracking-[0.2em] mt-1 truncate">{selectedUser.email}</p>
                   </div>
                 </div>
                 <button 
@@ -975,7 +975,7 @@ export default function AdminDashboard() {
                     setIsModifyingDeadline(null);
                     setNewDeadline('');
                   }} 
-                  className="text-slate-500 hover:text-white transition-colors bg-white/5 p-2.5 rounded-xl border border-white/5"
+                  className="absolute top-6 right-6 sm:relative sm:top-0 sm:right-0 text-slate-500 hover:text-white transition-colors bg-white/5 p-2.5 rounded-xl border border-white/5"
                 >
                   <X size={20} />
                 </button>
@@ -997,7 +997,7 @@ export default function AdminDashboard() {
                     {userTransactions.filter(t => t.status === 'borrowed' || t.status === 'overdue').map(t => {
                       const fine = calculateFine(t.dueDate);
                       return (
-                        <div key={t.id} className="glass-panel border-white/5 rounded-2xl p-5 flex items-center justify-between group hover:bg-white/[0.08] transition-all">
+                        <div key={t.id} className="glass-panel border-white/5 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 group hover:bg-white/[0.08] transition-all">
                           <div className="flex items-center gap-4">
                             <div className="h-16 w-12 bg-white/5 rounded-lg shadow-2xl overflow-hidden flex-shrink-0 border border-white/10">
                               <img src={t.bookCover} alt="" className="h-full w-full object-cover" />
@@ -1009,8 +1009,8 @@ export default function AdminDashboard() {
                               {isModifyingDeadline === t.id ? (
                                 <div className="mt-2 flex gap-2 animate-in fade-in slide-in-from-top-2">
                                   <input 
-                                    type="date" 
-                                    className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-[10px] text-white focus:outline-none focus:ring-2 focus:ring-primary-accent/40"
+                                    type="datetime-local" 
+                                    className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-[10px] text-white focus:outline-none focus:ring-2 focus:ring-primary-accent/40 w-full sm:w-auto"
                                     value={newDeadline}
                                     onChange={(e) => setNewDeadline(e.target.value)}
                                   />
@@ -1030,7 +1030,9 @@ export default function AdminDashboard() {
                                         // Automated Notification
                                         await addDoc(collection(db, 'notifications'), {
                                           userId: selectedUser.id,
-                                          message: `Schedule Updated: The return date for "${t.bookTitle}" has been moved to ${dateObj.toLocaleDateString('en-GB')}.`,
+                                          bookId: t.bookId,
+                                          bookTitle: t.bookTitle,
+                                          message: `Schedule Updated: The return date for "${t.bookTitle}" has been moved to ${dateObj.toLocaleString('en-GB')}.`,
                                           type: 'update',
                                           read: false,
                                           createdAt: new Date().toISOString()
@@ -1065,7 +1067,10 @@ export default function AdminDashboard() {
                                 <button 
                                   onClick={() => {
                                     setIsModifyingDeadline(t.id);
-                                    setNewDeadline(t.dueDate.split('T')[0]);
+                                    // Format ISO to YYYY-MM-DDThh:mm
+                                    const date = new Date(t.dueDate);
+                                    const formatted = date.toISOString().slice(0, 16);
+                                    setNewDeadline(formatted);
                                   }}
                                   className="mt-2 flex items-center gap-1.5 text-[9px] font-black uppercase text-primary-accent hover:text-white transition-colors group"
                                 >
@@ -1099,7 +1104,7 @@ export default function AdminDashboard() {
                     <History size={16} className="text-slate-600" />
                     Borrowing History
                   </h4>
-                  <div className="glass-panel border-white/5 rounded-[2rem] overflow-hidden">
+                  <div className="glass-panel border-white/5 rounded-[2rem] overflow-x-auto custom-scrollbar">
                     <table className="w-full text-left">
                       <thead>
                         <tr className="bg-white/[0.03] text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] border-b border-white/5">

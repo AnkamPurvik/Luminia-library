@@ -391,19 +391,19 @@ export default function OPAC({ searchQuery: globalSearch, onSearchChange: setGlo
             </div>
 
             {/* Stats Section */}
-            <div className="bg-gradient-to-r from-primary-accent/10 via-secondary-accent/10 to-primary-accent/10 backdrop-blur-3xl rounded-[3.5rem] p-16 border border-white/5 mx-4 flex flex-col md:flex-row items-center justify-around gap-12 shadow-2xl relative overflow-hidden">
+            <div className="bg-gradient-to-r from-primary-accent/10 via-secondary-accent/10 to-primary-accent/10 backdrop-blur-3xl rounded-[2rem] sm:rounded-[3.5rem] p-10 sm:p-16 border border-white/5 mx-4 flex flex-col md:flex-row items-center justify-around gap-12 shadow-2xl relative overflow-hidden">
               <div className="absolute inset-0 bg-primary-accent/5 animate-pulse"></div>
               <div className="text-center relative z-10">
-                <p className="text-5xl font-black text-white mb-2 tracking-tighter">5,000+</p>
-                <p className="text-primary-accent font-black uppercase tracking-[0.3em] text-[10px]">TOTAL BOOKS</p>
+                <p className="text-4xl sm:text-5xl font-black text-white mb-2 tracking-tighter">5,000+</p>
+                <p className="text-primary-accent font-black uppercase tracking-[0.3em] text-[9px] sm:text-[10px]">TOTAL BOOKS</p>
               </div>
               <div className="text-center relative z-10">
-                <p className="text-5xl font-black text-white mb-2 tracking-tighter">1,200+</p>
-                <p className="text-secondary-accent font-black uppercase tracking-[0.3em] text-[10px]">ACTIVE MEMBERS</p>
+                <p className="text-4xl sm:text-5xl font-black text-white mb-2 tracking-tighter">1,200+</p>
+                <p className="text-secondary-accent font-black uppercase tracking-[0.3em] text-[9px] sm:text-[10px]">ACTIVE MEMBERS</p>
               </div>
               <div className="text-center relative z-10">
-                <p className="text-5xl font-black text-white mb-2 tracking-tighter">99.9%</p>
-                <p className="text-emerald-400 font-black uppercase tracking-[0.3em] text-[10px]">SYSTEM UPTIME</p>
+                <p className="text-4xl sm:text-5xl font-black text-white mb-2 tracking-tighter">99.9%</p>
+                <p className="text-emerald-400 font-black uppercase tracking-[0.3em] text-[9px] sm:text-[10px]">SYSTEM UPTIME</p>
               </div>
             </div>
           </div>

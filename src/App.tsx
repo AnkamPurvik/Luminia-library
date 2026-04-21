@@ -96,7 +96,7 @@ export default function App() {
     <ThemeProvider>
       <Router>
         <div className="h-screen bg-bg-dark text-slate-100 font-sans antialiased selection:bg-primary-accent/30 overflow-hidden flex">
-          <Toaster position="top-right" />
+          <Toaster position="top-center" />
           
           {/* Desktop Sidebar — hidden on mobile */}
           <div className="hidden md:block">
