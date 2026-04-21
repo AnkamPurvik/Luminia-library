@@ -50,14 +50,14 @@ export default function Settings() {
         type: 'user',
         user: { name: profile?.name || 'User' },
         action: 'Updated system configuration',
-        details: 'User interface preferences and sync markers updated successfully.',
+        details: 'User interface preferences updated successfully.',
         status: 'SUCCESS'
       });
       
       toast.success('System preferences updated!');
     } catch (err) {
       console.error(err);
-      toast.error('Failed to sync settings');
+      toast.error('Failed to save settings');
     } finally {
       setIsSaving(false);
     }
@@ -67,7 +67,7 @@ export default function Settings() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
         <Loader2 className="h-10 w-10 text-primary-accent animate-spin mb-4" />
-        <p className="text-slate-500 font-black uppercase tracking-[0.3em] text-[10px] animate-pulse">Syncing Preferences...</p>
+        <p className="text-slate-500 font-black uppercase tracking-[0.3em] text-[10px] animate-pulse">Saving Settings...</p>
       </div>
     );
   }
@@ -87,9 +87,9 @@ export default function Settings() {
       <header className="mb-12">
         <h1 className="text-4xl font-black text-white tracking-tighter uppercase flex items-center gap-4">
           <SettingsIcon size={36} className="text-primary-accent" />
-          System Configuration
+          Settings
         </h1>
-        <p className="text-slate-500 font-black uppercase tracking-[0.2em] text-[10px] mt-2">Manage your member identity and visual library interface.</p>
+        <p className="text-slate-500 font-black uppercase tracking-[0.2em] text-[10px] mt-2">Manage your profile and display preferences.</p>
       </header>
 
       <div className="space-y-8">
@@ -100,7 +100,7 @@ export default function Settings() {
               <div className="w-10 h-10 rounded-xl bg-primary-accent/10 flex items-center justify-center text-primary-accent">
                 <User size={20} />
               </div>
-              <h2 className="text-lg font-black text-white uppercase tracking-tight">Member Identity</h2>
+              <h2 className="text-lg font-black text-white uppercase tracking-tight">User Profile</h2>
             </div>
             {profile?.isPro && (
               <span className="bg-amber-400/10 text-amber-500 text-[9px] font-black px-3 py-1 rounded-lg border border-amber-400/20 uppercase tracking-widest">Lumina Pro Member</span>
@@ -109,13 +109,13 @@ export default function Settings() {
           <div className="p-10 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-3">
-                <label className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Public Alias</label>
+                <label className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Full Name</label>
                 <div className="px-5 py-4 bg-white/5 border border-white/5 rounded-2xl text-white font-black text-xs uppercase opacity-70">
                   {profile?.name}
                 </div>
               </div>
               <div className="space-y-3">
-                <label className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Registered Endpoint</label>
+                <label className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Email Address</label>
                 <div className="px-5 py-4 bg-white/5 border border-white/5 rounded-2xl text-white font-black text-xs uppercase opacity-70">
                   {profile?.email}
                 </div>
@@ -129,7 +129,7 @@ export default function Settings() {
           <section className="glass-panel rounded-[2rem] border-white/5 p-8 space-y-8">
             <h3 className="text-xs font-black text-white uppercase tracking-[0.2em] flex items-center gap-3">
               <Bell size={16} className="text-secondary-accent" />
-              Sync Alerts
+              Notifications
             </h3>
             <div className="space-y-6">
               {[
@@ -155,7 +155,7 @@ export default function Settings() {
           <section className="glass-panel rounded-[2rem] border-white/5 p-8 space-y-8">
             <h3 className="text-xs font-black text-white uppercase tracking-[0.2em] flex items-center gap-3">
               <Shield size={16} className="text-indigo-400" />
-              Privacy Core
+              Privacy & Security
             </h3>
             <div className="space-y-6">
               {[
@@ -183,7 +183,7 @@ export default function Settings() {
         <section className="glass-panel rounded-[2rem] border-white/5 p-10">
           <h3 className="text-xs font-black text-white uppercase tracking-[0.2em] flex items-center gap-3 mb-10">
             <Palette size={16} className="text-amber-400" />
-            Visual Library Engine
+            Theme & Appearance
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-6">
             {themeColors.map((t) => (
@@ -218,7 +218,7 @@ export default function Settings() {
             className="flex-1 py-5 bg-primary-accent text-white rounded-3xl font-black uppercase tracking-[0.3em] text-[10px] hover:bg-primary-accent/90 shadow-2xl shadow-primary-accent/30 transition-all flex items-center justify-center gap-4 active:scale-95 disabled:opacity-50"
           >
             {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-            Synchronize Preferences
+            Save Settings
           </button>
           <button 
             className="px-10 py-5 bg-white/5 text-slate-500 rounded-3xl font-black uppercase tracking-[0.3em] text-[10px] hover:bg-white/10 transition-all border border-white/5"
@@ -235,7 +235,7 @@ export default function Settings() {
            <Globe size={20} className="text-slate-700 hover:text-white transition-colors cursor-pointer" />
         </div>
         <p className="text-slate-700 font-black uppercase tracking-[0.3em] text-[8px]">
-          Luminia Core OS v1.7.2 // Distributed Node // End-to-End Encryption Active
+          Luminia Library v1.7.2 // Secure Connection Active
         </p>
       </footer>
     </div>

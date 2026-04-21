@@ -134,7 +134,7 @@ export default function Login() {
             )}
 
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em] px-1">Sync Endpoint</label>
+              <label className="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em] px-1">Email Address</label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-500 group-focus-within:text-primary-accent transition-colors">
                   <Mail size={18} />
@@ -157,9 +157,9 @@ export default function Login() {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between px-1">
-                <label className="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em]">Access Key</label>
+                <label className="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em]">Password</label>
                 {isLogin && (
-                  <button type="button" className="text-[10px] font-black uppercase tracking-widest text-primary-accent hover:text-primary-accent/80 transition-colors">Reset Key</button>
+                  <button type="button" className="text-[10px] font-black uppercase tracking-widest text-primary-accent hover:text-primary-accent/80 transition-colors">Forgot Password</button>
                 )}
               </div>
               <div className="relative group">
@@ -197,7 +197,7 @@ export default function Login() {
           <div className="relative my-12">
             <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-px bg-white/5"></div>
             <div className="relative flex justify-center">
-              <span className="px-6 bg-bg-dark text-[8px] font-black text-slate-600 uppercase tracking-[0.4em]">External Gateways</span>
+              <span className="px-6 bg-bg-dark text-[8px] font-black text-slate-600 uppercase tracking-[0.4em]">Social Sign In</span>
             </div>
           </div>
 
@@ -228,7 +228,7 @@ export default function Login() {
 
           <footer className="mt-16 text-center">
             <p className="text-[10px] text-slate-600 font-bold uppercase tracking-widest leading-relaxed">
-              Secure core authentication protocols active. Your identity is encrypted via Lumina Library biometric standards.
+              Secure authentication enabled. Your account data is protected with industry-standard encryption.
             </p>
           </footer>
         </div>
@@ -269,7 +269,7 @@ export default function Login() {
           <div className="mt-20 space-y-6">
             <h2 className="text-5xl font-black text-white tracking-tighter uppercase leading-none">Integrated Library<br/><span className="text-primary-accent">Luminia Pro</span></h2>
             <p className="text-slate-500 font-bold uppercase tracking-[0.2em] text-xs leading-relaxed max-w-sm mx-auto">
-              Accelerate your knowledge synchronization with the industry's most advanced catalog nucleus.
+              Enhance your reading experience with our advanced library catalog.
             </p>
           </div>
         </motion.div>

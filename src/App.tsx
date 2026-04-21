@@ -12,6 +12,8 @@ import { UserProfile } from './types';
 import { Toaster } from 'react-hot-toast';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
+import { MobileNav } from './components/layout/MobileNav';
+import { ChatWidget } from './components/ui/ChatWidget';
 import { ThemeProvider } from './context/ThemeContext';
 import OPAC from './pages/OPAC';
 import UserDashboard from './pages/UserDashboard';
@@ -83,7 +85,7 @@ export default function App() {
           <div className="absolute inset-0 bg-primary-accent/20 blur-xl animate-pulse rounded-full"></div>
           <Loader2 className="h-10 w-10 text-primary-accent animate-spin relative z-10" />
         </div>
-        <p className="mt-8 text-slate-500 font-black uppercase tracking-[0.3em] text-[10px] animate-pulse">Initializing Library Core...</p>
+        <p className="mt-8 text-slate-500 font-black uppercase tracking-[0.3em] text-[10px] animate-pulse">Loading Library...</p>
       </div>
     );
   }
@@ -96,13 +98,16 @@ export default function App() {
         <div className="h-screen bg-bg-dark text-slate-100 font-sans antialiased selection:bg-primary-accent/30 overflow-hidden flex">
           <Toaster position="top-right" />
           
-          {/* Universal Navigation Architecture */}
-          <Sidebar profile={profile} isAdmin={isAdmin} />
+          {/* Desktop Sidebar — hidden on mobile */}
+          <div className="hidden md:block">
+            <Sidebar profile={profile} isAdmin={isAdmin} />
+          </div>
 
           <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
             <Header profile={profile} searchQuery={searchQuery} onSearchChange={setSearchQuery} />
             
-            <main className="flex-1 overflow-y-auto custom-scrollbar relative">
+            {/* Extra bottom padding on mobile for bottom nav */}
+            <main className="flex-1 overflow-y-auto custom-scrollbar relative pb-20 md:pb-0">
               <Routes>
                 <Route path="/" element={<OPAC searchQuery={searchQuery} onSearchChange={setSearchQuery} />} />
                 <Route path="/book/:id" element={<BookDetail />} />
@@ -130,6 +135,12 @@ export default function App() {
             </main>
           </div>
         </div>
+
+        {/* Mobile Bottom Nav */}
+        <MobileNav profile={profile} isAdmin={isAdmin} />
+
+        {/* Floating Chat Widget — show for logged-in non-admin users */}
+        {user && !isAdmin && <ChatWidget />}
       </Router>
     </ThemeProvider>
   );

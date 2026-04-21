@@ -153,7 +153,7 @@ export default function BookDetail() {
           <div className="absolute inset-0 bg-primary-accent/20 blur-xl animate-pulse rounded-full"></div>
           <Loader2 className="h-10 w-10 text-primary-accent animate-spin relative z-10" />
         </div>
-        <p className="mt-8 text-slate-500 font-black uppercase tracking-[0.3em] text-[10px] animate-pulse">Accessing Database Archives...</p>
+        <p className="mt-8 text-slate-500 font-black uppercase tracking-[0.3em] text-[10px] animate-pulse">Loading Book Details...</p>
       </div>
     );
   }
@@ -168,7 +168,7 @@ export default function BookDetail() {
             onClick={() => navigate('/')}
             className="text-primary-accent font-black uppercase tracking-widest text-xs hover:text-white transition-colors"
           >
-            Return to Library Catalog
+            Back to Catalog
           </button>
         </div>
       </div>
@@ -182,7 +182,7 @@ export default function BookDetail() {
         className="flex items-center text-slate-500 hover:text-primary-accent mb-12 transition-all group font-black uppercase tracking-widest text-[10px]"
       >
         <ArrowLeft size={16} className="mr-3 group-hover:-translate-x-1 transition-transform" />
-        Back to Archives
+        Back to Catalog
       </button>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
@@ -224,7 +224,7 @@ export default function BookDetail() {
                 }`}
               >
                 {isProcessing ? <Loader2 size={18} className="animate-spin" /> : <ShoppingBag size={18} />}
-                {book.availableCopies > 0 ? 'Initialize Loan' : 'Temporarily Out of Core'}
+                {book.availableCopies > 0 ? 'Borrow Book' : 'Currently Out of Stock'}
               </button>
 
               {book.availableCopies === 0 && (
@@ -234,7 +234,7 @@ export default function BookDetail() {
                   className="w-full mt-4 py-5 bg-white/5 border border-white/10 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-white/10 transition-all flex items-center justify-center gap-3 active:scale-95"
                 >
                   {isProcessing ? <Loader2 size={18} className="animate-spin" /> : <Bookmark size={18} />}
-                  Reserve Priority Slot
+                  Reserve Book
                 </button>
               )}
             </div>
@@ -264,10 +264,10 @@ export default function BookDetail() {
             <div className="space-y-6">
               <h3 className="text-xl font-black text-white flex items-center gap-3 uppercase tracking-tighter">
                 <Info size={20} className="text-primary-accent" />
-                Archives Summary
+                Description
               </h3>
               <p className="text-slate-500 leading-relaxed text-lg font-bold uppercase tracking-tight">
-                {book.description || 'No detailed archived summary available for this title.'}
+                {book.description || 'No description available for this title.'}
               </p>
             </div>
           </section>
@@ -277,7 +277,7 @@ export default function BookDetail() {
           <section>
             <h3 className="text-xl font-black text-white flex items-center gap-3 uppercase tracking-tighter mb-8">
               <History size={20} className="text-secondary-accent" />
-              Recent System Activity
+              Recent Activity
             </h3>
             {history.length > 0 ? (
               <div className="space-y-4">
@@ -288,9 +288,9 @@ export default function BookDetail() {
                         <User size={20} />
                       </div>
                       <div>
-                        <p className="text-sm font-black text-white uppercase tracking-tight">System Member Account</p>
+                        <p className="text-sm font-black text-white uppercase tracking-tight">Member Account</p>
                         <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-1">
-                          ARCHIVED: {new Date(t.issueDate).toLocaleDateString()}
+                          BORROWED: {new Date(t.issueDate).toLocaleDateString()}
                         </p>
                       </div>
                     </div>
@@ -305,7 +305,7 @@ export default function BookDetail() {
             ) : (
               <div className="p-12 glass-panel border-dashed border-white/10 rounded-[2rem] flex flex-col items-center justify-center text-center opacity-40">
                 <History size={40} className="text-slate-500 mb-4" />
-                <p className="text-slate-500 font-black uppercase tracking-widest text-[10px]">No recent transaction logs found in archives.</p>
+                <p className="text-slate-500 font-black uppercase tracking-widest text-[10px]">No recent borrowing history found.</p>
               </div>
             )}
           </section>

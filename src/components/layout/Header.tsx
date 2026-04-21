@@ -19,21 +19,21 @@ export function Header({ profile, searchQuery, onSearchChange }: HeaderProps) {
   }, []);
 
   return (
-    <header className="h-24 bg-bg-dark/50 backdrop-blur-3xl border-b border-white/5 flex items-center justify-between px-10 sticky top-0 z-40 transition-all">
+    <header className="h-16 md:h-24 bg-bg-dark/50 backdrop-blur-3xl border-b border-white/5 flex items-center justify-between px-4 md:px-10 sticky top-0 z-40 transition-all">
       <div className="flex-1 max-w-2xl">
         <div className="relative group">
           <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary-accent transition-colors" size={18} />
           <input 
             type="text" 
-            placeholder="Search universal library index..."
-            className="w-full pl-14 pr-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-[11px] font-black uppercase tracking-widest text-white focus:outline-none focus:ring-4 focus:ring-primary-accent/10 focus:border-primary-accent/40 transition-all shadow-inner"
+            placeholder="Search catalog..."
+            className="w-full pl-10 md:pl-14 pr-4 md:pr-6 py-2 md:py-4 bg-white/5 border border-white/10 rounded-xl md:rounded-2xl text-[9px] md:text-[11px] font-black uppercase tracking-widest text-white focus:outline-none focus:ring-4 focus:ring-primary-accent/10 focus:border-primary-accent/40 transition-all shadow-inner"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
           />
         </div>
       </div>
 
-      <div className="flex items-center gap-10">
+      <div className="flex items-center gap-4 md:gap-10">
         {/* Digital Clock */}
         <div className="hidden lg:flex flex-col items-end">
           <div className="flex items-center gap-2 text-primary-accent">
@@ -47,12 +47,12 @@ export function Header({ profile, searchQuery, onSearchChange }: HeaderProps) {
           </span>
         </div>
 
-        <div className="h-8 w-px bg-white/10" />
+        <div className="hidden md:block h-8 w-px bg-white/10" />
 
         {/* User Status */}
         {profile ? (
-          <div className="flex items-center gap-4">
-            <div className="text-right hidden sm:block">
+          <div className="flex items-center gap-3 md:gap-4">
+            <div className="text-right hidden md:block">
               <div className="flex items-center justify-end gap-2">
                 <span className="text-sm font-black text-white tracking-tight uppercase whitespace-nowrap">{profile.name}</span>
                 {profile.isPro && <Sparkles size={14} className="text-amber-400 fill-amber-400 animate-pulse" />}
@@ -64,7 +64,7 @@ export function Header({ profile, searchQuery, onSearchChange }: HeaderProps) {
                 </span>
               </div>
             </div>
-            <div className={`h-12 w-12 rounded-2xl border flex items-center justify-center overflow-hidden shadow-2xl transition-all ${
+            <div className={`h-10 w-10 md:h-12 md:w-12 rounded-xl md:rounded-2xl border flex items-center justify-center overflow-hidden shadow-2xl transition-all ${
               profile.isPro ? 'bg-amber-400/10 border-amber-400/50 ring-4 ring-amber-400/10' : 'bg-white/5 border-white/10'
             }`}>
               <img 

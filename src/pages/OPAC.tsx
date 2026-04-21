@@ -247,7 +247,7 @@ export default function OPAC({ searchQuery: globalSearch, onSearchChange: setGlo
           bookTitle: book.title,
           bookCover: book.coverUrl || '',
           borrowed_at: new Date().toISOString(), // Precision timestamp
-          expected_return: dueDate.toISOString(), // System deadline
+          expected_return: dueDate.toISOString(), // Return date
           returned_at: null, // Scanned back later
           issueDate: new Date().toISOString(), // Fallback
           dueDate: dueDate.toISOString(), // Fallback
@@ -359,7 +359,7 @@ export default function OPAC({ searchQuery: globalSearch, onSearchChange: setGlo
               {[
                 {
                   icon: <Zap className="text-secondary-accent" />,
-                  title: "Instant Sync",
+                  title: "Live Updates",
                   desc: "Real-time resource allocation. Reserve books and get notified the millisecond they are returned."
                 },
                 {
@@ -413,7 +413,7 @@ export default function OPAC({ searchQuery: globalSearch, onSearchChange: setGlo
               <div className="absolute inset-0 bg-primary-accent/20 blur-2xl animate-pulse rounded-full"></div>
               <Loader2 className="h-12 w-12 text-primary-accent animate-spin relative z-10" />
             </div>
-            <p className="text-slate-500 font-black uppercase tracking-[0.3em] text-[10px] mt-8 animate-pulse">Syncing Library Database...</p>
+            <p className="text-slate-500 font-black uppercase tracking-[0.3em] text-[10px] mt-8 animate-pulse">Loading Library Catalog...</p>
           </div>
         ) : error ? (
           <div className="bg-rose-500/10 border border-rose-500/20 rounded-[2rem] p-10 text-center backdrop-blur-xl">

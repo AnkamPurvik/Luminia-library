@@ -9,9 +9,10 @@ import {
   Package, BookOpen, Users, AlertCircle, TrendingUp,
   X, Save, Hash, Tag, Type, Image as ImageIcon, Sparkles,
   History, RotateCcw, Shield, Activity, Calendar, Clock, ArrowRight,
-  CheckCircle2
+  CheckCircle2, MessageCircle
 } from 'lucide-react';
 import { Modal } from '../components/ui/Modal';
+import { AdminSupportInbox } from '../components/ui/AdminSupportInbox';
 import toast from 'react-hot-toast';
 
 export default function AdminDashboard() {
@@ -23,11 +24,14 @@ export default function AdminDashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBook, setEditingBook] = useState<Book | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'inventory' | 'users'>('inventory');
+  const [activeTab, setActiveTab] = useState<'inventory' | 'users' | 'support'>('inventory');
   const [users, setUsers] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [userTransactions, setUserTransactions] = useState<any[]>([]);
+  const [isModifyingDeadline, setIsModifyingDeadline] = useState<string | null>(null);
+  const [newDeadline, setNewDeadline] = useState('');
   const [isbnLookup, setIsbnLookup] = useState('');
+  const [totalUnread, setTotalUnread] = useState(0);
   const [isFetching, setIsFetching] = useState(false);
   const [modalConfig, setModalConfig] = useState<{
     isOpen: boolean;
@@ -84,6 +88,15 @@ export default function AdminDashboard() {
       unsubscribeMembers();
       unsubscribeTransactions();
     };
+  }, []);
+
+  useEffect(() => {
+    const q = query(collection(db, 'chat_sessions'), where('status', '==', 'open'));
+    const unsubscribeSupport = onSnapshot(q, (snapshot) => {
+      const unread = snapshot.docs.reduce((acc, doc) => acc + (doc.data().unreadByAdmin || 0), 0);
+      setTotalUnread(unread);
+    });
+    return () => unsubscribeSupport();
   }, []);
 
   const handleOpenModal = (book?: Book) => {
@@ -261,16 +274,7 @@ export default function AdminDashboard() {
     });
   };
 
-  const filteredBooks = books.filter(b => 
-    b.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    b.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    b.isbn.includes(searchQuery)
-  );
 
-  const filteredUsers = users.filter(u => 
-    u.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.email?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   const handleUpdateUserRole = async (userId: string, currentRole: string) => {
     const newRole = currentRole === 'admin' ? 'member' : 'admin';
@@ -404,11 +408,23 @@ export default function AdminDashboard() {
     return 0;
   };
 
+  const filteredBooks = books.filter(book => 
+    book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    book.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    book.isbn.includes(searchQuery) ||
+    book.genre.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredUsers = users.filter(user => 
+    user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.email?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   const stats = [
     { label: 'Total Titles', value: books.length, icon: Package, color: 'bg-blue-500' },
     { label: 'Total Copies', value: books.reduce((acc, b) => acc + b.totalCopies, 0), icon: BookOpen, color: 'bg-indigo-500' },
     { label: 'Active Members', value: membersCount, icon: Users, color: 'bg-emerald-500' },
-    { label: 'Overdue Fines', value: `₹${totalFines.toLocaleString('en-IN')}`, icon: AlertCircle, color: 'bg-rose-500' },
+    { label: 'Support Queue', value: totalUnread, icon: MessageCircle, color: 'bg-rose-500' },
   ];
 
   if (isLoading) {
@@ -418,7 +434,7 @@ export default function AdminDashboard() {
           <div className="absolute inset-0 bg-primary-accent/20 blur-xl animate-pulse rounded-full"></div>
           <Loader2 className="h-10 w-10 text-primary-accent animate-spin relative z-10" />
         </div>
-        <p className="mt-6 text-slate-500 font-black uppercase tracking-[0.3em] text-[10px] animate-pulse">Syncing System Core...</p>
+        <p className="mt-6 text-slate-500 font-black uppercase tracking-[0.3em] text-[10px] animate-pulse">Loading Library System...</p>
       </div>
     );
   }
@@ -429,11 +445,11 @@ export default function AdminDashboard() {
         <div>
           <h1 className="text-5xl font-black text-white tracking-tighter uppercase leading-tight">Admin Console</h1>
           <div className="flex items-center gap-4 mt-3">
-             <p className="text-slate-500 font-black uppercase tracking-[0.2em] text-[10px]">Library Core / System Efficiency</p>
+             <p className="text-slate-500 font-black uppercase tracking-[0.2em] text-[10px]">Library Management / Dashboard</p>
              <div className="h-4 w-px bg-white/10" />
              <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-500/10 text-emerald-500 rounded text-[9px] font-black uppercase border border-emerald-500/20">
                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-               Live Sync Active
+               Live Status Active
              </div>
           </div>
         </div>
@@ -444,14 +460,14 @@ export default function AdminDashboard() {
             className="inline-flex items-center px-6 py-4 bg-white/5 border border-white/10 text-slate-300 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-white/10 hover:text-white transition-all shadow-xl active:scale-95 group"
           >
             <Activity size={16} className="mr-3 text-primary-accent group-hover:scale-110 transition-transform" />
-            System Timeline
+            Activity Log
           </button>
           <button 
             onClick={() => handleOpenModal()}
             className="inline-flex items-center px-8 py-4 bg-primary-accent text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-primary-accent/90 transition-all shadow-xl shadow-primary-accent/20 active:scale-95 border border-primary-accent/50 group"
           >
             <Plus size={18} className="mr-3 group-hover:rotate-90 transition-transform" />
-            Archive New Title
+            Add New Book
           </button>
         </div>
       </header>
@@ -504,13 +520,22 @@ export default function AdminDashboard() {
           Member Control
           {activeTab === 'users' && <motion.div layoutId="tab" className="absolute bottom-0 left-0 right-0 h-1 bg-primary-accent rounded-full shadow-[0_0_10px_rgba(79,70,229,0.8)]" />}
         </button>
+        <button 
+          onClick={() => setActiveTab('support')}
+          className={`pb-4 px-2 text-xs font-black uppercase tracking-[0.2em] transition-all relative ${
+            activeTab === 'support' ? 'text-primary-accent' : 'text-slate-500 hover:text-white'
+          }`}
+        >
+          Support Inbox
+          {activeTab === 'support' && <motion.div layoutId="tab" className="absolute bottom-0 left-0 right-0 h-1 bg-primary-accent rounded-full shadow-[0_0_10px_rgba(79,70,229,0.8)]" />}
+        </button>
       </div>
 
       {activeTab === 'inventory' ? (
         /* Inventory Table */
         <div className="glass-panel border-white/5 rounded-3xl shadow-2xl overflow-hidden">
         <div className="p-8 border-b border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-white/5">
-          <h2 className="text-xl font-black text-white uppercase tracking-tight">Book Database</h2>
+          <h2 className="text-xl font-black text-white uppercase tracking-tight">Book Collection</h2>
           <div className="relative max-w-xs w-full group">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary-accent transition-colors" size={16} />
             <input 
@@ -602,7 +627,7 @@ export default function AdminDashboard() {
           </table>
         </div>
         </div>
-      ) : (
+      ) : activeTab === 'users' ? (
         /* User Management Table */
         <div className="glass-panel border-white/5 rounded-3xl shadow-2xl overflow-hidden">
           <div className="p-8 border-b border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-white/5">
@@ -623,11 +648,11 @@ export default function AdminDashboard() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-white/5 text-slate-500 text-[10px] uppercase tracking-[0.2em] font-black border-b border-white/5">
-                  <th className="px-8 py-5">Identity Profile</th>
-                  <th className="px-8 py-5">Sync State</th>
-                  <th className="px-8 py-5">Access Rank</th>
+                  <th className="px-8 py-5">Member Profile</th>
+                  <th className="px-8 py-5">Status</th>
+                  <th className="px-8 py-5">Account Role</th>
                   <th className="px-8 py-5">Established</th>
-                  <th className="px-8 py-5 text-right">Direct Controls</th>
+                  <th className="px-8 py-5 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -717,6 +742,11 @@ export default function AdminDashboard() {
             </table>
           </div>
         </div>
+      ) : (
+        /* Support Inbox Tab */
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <AdminSupportInbox />
+        </div>
       )}
 
       {/* Add/Edit Modal */}
@@ -738,7 +768,7 @@ export default function AdminDashboard() {
             >
               <div className="p-8 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
                 <h3 className="text-2xl font-black text-white uppercase tracking-tighter">
-                  {editingBook ? 'Update Core Asset' : 'Archive New Asset'}
+                  {editingBook ? 'Update Book' : 'Add New Book'}
                 </h3>
                 <button onClick={() => setIsModalOpen(false)} className="text-slate-500 hover:text-white transition-colors bg-white/5 p-2 rounded-xl border border-white/5">
                   <X size={20} />
@@ -750,7 +780,7 @@ export default function AdminDashboard() {
                 <div className="bg-primary-accent/5 p-10 border-b border-white/5">
                   <div className="space-y-4">
                     <label className="text-[10px] font-black uppercase text-primary-accent tracking-[0.3em] flex items-center gap-3">
-                       <Sparkles size={16} /> Metadata Autoload via ISBN
+                       <Sparkles size={16} /> Book Details via ISBN
                     </label>
                     <div className="flex gap-2">
                       <div className="relative flex-grow">
@@ -772,7 +802,7 @@ export default function AdminDashboard() {
                         className="px-8 py-4 bg-primary-accent text-white rounded-2xl font-black uppercase tracking-widest text-[9px] hover:bg-primary-accent/80 disabled:opacity-30 transition-all shadow-xl shadow-primary-accent/20 flex items-center gap-3 active:scale-95 whitespace-nowrap"
                       >
                         {isFetching ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
-                        Sync Metadata
+                        Fetch Details
                       </button>
                     </div>
                     <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-2 flex items-center gap-2">
@@ -786,7 +816,7 @@ export default function AdminDashboard() {
               <form onSubmit={handleSubmit} className="p-10 space-y-8 bg-surface-dark">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-3">
-                    <label className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Title Identifier</label>
+                    <label className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Book Title</label>
                     <input 
                       required
                       placeholder="BOOK TITLE"
@@ -796,7 +826,7 @@ export default function AdminDashboard() {
                     />
                   </div>
                   <div className="space-y-3">
-                    <label className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Author / Creator</label>
+                    <label className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Author</label>
                     <input 
                       required
                       placeholder="AUTHOR NAME"
@@ -806,7 +836,7 @@ export default function AdminDashboard() {
                     />
                   </div>
                   <div className="space-y-3">
-                    <label className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Global Asset ID (ISBN)</label>
+                    <label className="text-[9px] font-black uppercase text-slate-500 tracking-widest">ISBN</label>
                     <input 
                       required
                       placeholder="ISBN"
@@ -816,7 +846,7 @@ export default function AdminDashboard() {
                     />
                   </div>
                   <div className="space-y-3">
-                    <label className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Genre Classification</label>
+                    <label className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Genre</label>
                     <input 
                       required
                       placeholder="GENRE"
@@ -826,7 +856,7 @@ export default function AdminDashboard() {
                     />
                   </div>
                   <div className="space-y-3">
-                    <label className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Nexus Stock</label>
+                    <label className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Total Copies</label>
                     <input 
                       type="number"
                       required
@@ -837,7 +867,7 @@ export default function AdminDashboard() {
                     />
                   </div>
                   <div className="space-y-3">
-                    <label className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Active Sync</label>
+                    <label className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Available Copies</label>
                     <input 
                       type="number"
                       required
@@ -850,7 +880,7 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className="space-y-3">
-                  <label className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Asset Visualization (Cover URL)</label>
+                  <label className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Cover Image URL</label>
                   <div className="flex gap-4">
                     <input 
                       className="flex-grow px-5 py-4 bg-white/5 border border-white/5 rounded-2xl focus:ring-4 focus:ring-primary-accent/10 outline-none text-white font-black text-xs"
@@ -873,7 +903,7 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className="space-y-3">
-                  <label className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Asset Intelligence (Description)</label>
+                  <label className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Description</label>
                   <textarea 
                     rows={3}
                     className="w-full px-5 py-4 bg-white/5 border border-white/5 rounded-2xl focus:ring-4 focus:ring-primary-accent/10 outline-none text-white font-black text-xs uppercase resize-none"
@@ -889,14 +919,14 @@ export default function AdminDashboard() {
                     onClick={() => setIsModalOpen(false)}
                     className="flex-1 py-4 bg-white/5 text-slate-500 rounded-2xl font-black uppercase tracking-widest text-[9px] hover:bg-white/10 transition-all border border-white/5"
                   >
-                    Abort Sync
+                    Cancel
                   </button>
                   <button 
                     type="submit"
                     className="flex-1 py-4 bg-primary-accent text-white rounded-2xl font-black uppercase tracking-widest text-[9px] hover:bg-primary-accent/90 shadow-2xl shadow-primary-accent/30 transition-all active:scale-[0.98] border border-primary-accent/50"
                   >
                     <Save size={18} className="inline mr-2" />
-                    {editingBook ? 'Commit Update' : 'Initialize Matrix'}
+                    {editingBook ? 'Save Changes' : 'Add Book'}
                   </button>
                 </div>
               </form>
@@ -913,7 +943,11 @@ export default function AdminDashboard() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setSelectedUser(null)}
+              onClick={() => {
+                setSelectedUser(null);
+                setIsModifyingDeadline(null);
+                setNewDeadline('');
+              }}
               className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
             />
             <motion.div
@@ -935,7 +969,14 @@ export default function AdminDashboard() {
                     <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mt-1">{selectedUser.email}</p>
                   </div>
                 </div>
-                <button onClick={() => setSelectedUser(null)} className="text-slate-500 hover:text-white transition-colors bg-white/5 p-2.5 rounded-xl border border-white/5">
+                <button 
+                  onClick={() => {
+                    setSelectedUser(null);
+                    setIsModifyingDeadline(null);
+                    setNewDeadline('');
+                  }} 
+                  className="text-slate-500 hover:text-white transition-colors bg-white/5 p-2.5 rounded-xl border border-white/5"
+                >
                   <X size={20} />
                 </button>
               </div>
@@ -946,10 +987,10 @@ export default function AdminDashboard() {
                   <div className="flex items-center justify-between mb-6">
                     <h4 className="font-black text-white flex items-center gap-3 uppercase tracking-[0.2em] text-[10px]">
                       <div className="w-2 h-2 rounded-full bg-primary-accent shadow-[0_0_8px_rgba(79,70,229,0.8)]" />
-                      Live Circulation Assets
+                      Currently Borrowed Books
                     </h4>
                     <span className="bg-primary-accent/10 text-primary-accent text-[9px] font-black px-3 py-1 rounded-lg border border-primary-accent/20 uppercase tracking-widest">
-                      {userTransactions.filter(t => t.status === 'borrowed' || t.status === 'overdue').length} UNRETURNED
+                      {userTransactions.filter(t => t.status === 'borrowed' || t.status === 'overdue').length} BOOKS OUT
                     </span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -963,14 +1004,81 @@ export default function AdminDashboard() {
                             </div>
                             <div>
                               <p className="text-xs font-black text-white line-clamp-1 uppercase tracking-tight">{t.bookTitle}</p>
-                              <p className="text-[9px] text-slate-500 font-black uppercase mt-1 tracking-widest">SYNC DEADLINE: {new Date(t.dueDate).toLocaleDateString('en-GB')}</p>
+                              <p className="text-[9px] text-slate-500 font-black uppercase mt-1 tracking-widest">DUE DATE: {new Date(t.dueDate).toLocaleDateString('en-GB')}</p>
                               {fine > 0 && <p className="text-[9px] text-rose-500 font-black uppercase mt-1 animate-pulse tracking-widest">PENALTY: ₹{fine}</p>}
+                              {isModifyingDeadline === t.id ? (
+                                <div className="mt-2 flex gap-2 animate-in fade-in slide-in-from-top-2">
+                                  <input 
+                                    type="date" 
+                                    className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-[10px] text-white focus:outline-none focus:ring-2 focus:ring-primary-accent/40"
+                                    value={newDeadline}
+                                    onChange={(e) => setNewDeadline(e.target.value)}
+                                  />
+                                  <button 
+                                    onClick={async () => {
+                                      if (!newDeadline) return;
+                                      try {
+                                        const dateObj = new Date(newDeadline);
+                                        const updatedDate = dateObj.toISOString();
+                                        
+                                        await updateDoc(doc(db, 'transactions', t.id), {
+                                          dueDate: updatedDate,
+                                          updated_due_date: updatedDate,
+                                          original_due_date: t.dueDate
+                                        });
+
+                                        // Automated Notification
+                                        await addDoc(collection(db, 'notifications'), {
+                                          userId: selectedUser.id,
+                                          message: `Schedule Updated: The return date for "${t.bookTitle}" has been moved to ${dateObj.toLocaleDateString('en-GB')}.`,
+                                          type: 'update',
+                                          read: false,
+                                          createdAt: new Date().toISOString()
+                                        });
+
+                                        await logActivity({
+                                          type: 'admin',
+                                          user: { name: auth.currentUser?.displayName || 'Admin' },
+                                          action: `Modified deadline: ${t.bookTitle}`,
+                                          details: `User: ${selectedUser.name} | New Date: ${newDeadline}`,
+                                          status: 'INFO'
+                                        });
+
+                                        toast.success('Deadline updated and user notified');
+                                        setIsModifyingDeadline(null);
+                                      } catch (err) {
+                                        toast.error('Failed to update deadline');
+                                      }
+                                    }}
+                                    className="bg-emerald-500 text-white p-1 rounded-lg hover:bg-emerald-600 transition-colors"
+                                  >
+                                    <Save size={14} />
+                                  </button>
+                                  <button 
+                                    onClick={() => setIsModifyingDeadline(null)}
+                                    className="bg-white/5 text-slate-500 p-1 rounded-lg hover:text-white transition-colors"
+                                  >
+                                    <X size={14} />
+                                  </button>
+                                </div>
+                              ) : (
+                                <button 
+                                  onClick={() => {
+                                    setIsModifyingDeadline(t.id);
+                                    setNewDeadline(t.dueDate.split('T')[0]);
+                                  }}
+                                  className="mt-2 flex items-center gap-1.5 text-[9px] font-black uppercase text-primary-accent hover:text-white transition-colors group"
+                                >
+                                  <Calendar size={10} className="group-hover:scale-110 transition-transform" />
+                                  Modify Deadline
+                                </button>
+                              )}
                             </div>
                           </div>
                           <button 
                             onClick={() => handleAdminReturn(t)}
-                            className="bg-primary-accent/10 text-primary-accent p-3 rounded-xl hover:bg-primary-accent hover:text-white transition-all border border-primary-accent/20 active:scale-95"
-                            title="Force Sync Return"
+                            className="bg-primary-accent/10 text-primary-accent p-3 rounded-xl hover:bg-primary-accent hover:text-white transition-all border border-primary-accent/20 active:scale-95 touch-target"
+                            title="Return Book"
                           >
                             <RotateCcw size={18} />
                           </button>
@@ -979,7 +1087,7 @@ export default function AdminDashboard() {
                     })}
                     {userTransactions.filter(t => t.status === 'borrowed' || t.status === 'overdue').length === 0 && (
                       <div className="col-span-full py-12 text-center border-2 border-dashed border-white/5 rounded-[2rem] bg-white/[0.02]">
-                        <p className="text-slate-600 text-[10px] font-black uppercase tracking-[0.3em] italic">No active syncs found for this identity core.</p>
+                        <p className="text-slate-600 text-[10px] font-black uppercase tracking-[0.3em] italic">No active loans found for this member.</p>
                       </div>
                     )}
                   </div>
@@ -989,14 +1097,14 @@ export default function AdminDashboard() {
                 <section>
                   <h4 className="font-black text-white flex items-center gap-3 uppercase tracking-[0.2em] text-[10px] mb-6">
                     <History size={16} className="text-slate-600" />
-                    Archive History Trace
+                    Borrowing History
                   </h4>
                   <div className="glass-panel border-white/5 rounded-[2rem] overflow-hidden">
                     <table className="w-full text-left">
                       <thead>
                         <tr className="bg-white/[0.03] text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] border-b border-white/5">
-                          <th className="px-8 py-5">Asset Identifier</th>
-                          <th className="px-8 py-5">Sync Cycle</th>
+                          <th className="px-8 py-5">Book Title</th>
+                          <th className="px-8 py-5">Loan Period</th>
                           <th className="px-8 py-5">Overheads</th>
                           <th className="px-8 py-5 text-right">History Controls</th>
                         </tr>
@@ -1007,8 +1115,8 @@ export default function AdminDashboard() {
                             <td className="px-8 py-5 font-black text-white text-[11px] uppercase tracking-tight">{t.bookTitle}</td>
                             <td className="px-8 py-5">
                               <div className="flex flex-col">
-                                <span className="text-[9px] text-slate-500 font-black uppercase tracking-widest">ISSUED {new Date(t.issueDate).toLocaleDateString('en-GB')}</span>
-                                <span className="text-[9px] text-secondary-accent font-black uppercase tracking-widest mt-1">SYNCED {new Date(t.returnDate).toLocaleDateString('en-GB')}</span>
+                                <span className="text-[9px] text-slate-500 font-black uppercase tracking-widest">BORROWED {new Date(t.issueDate).toLocaleDateString('en-GB')}</span>
+                                <span className="text-[9px] text-secondary-accent font-black uppercase tracking-widest mt-1">RETURNED {new Date(t.returnDate).toLocaleDateString('en-GB')}</span>
                               </div>
                             </td>
                             <td className="px-8 py-5">
@@ -1024,7 +1132,7 @@ export default function AdminDashboard() {
                                   onClick={() => handleWaiverFine(t.id)}
                                   className="text-[9px] font-black uppercase tracking-widest text-primary-accent hover:text-white transition-colors"
                                 >
-                                  Waiver Sync Penalty
+                                  Waive Fine
                                 </button>
                               )}
                             </td>
@@ -1039,7 +1147,7 @@ export default function AdminDashboard() {
               <div className="p-10 bg-white/[0.02] border-t border-white/5 flex items-center justify-between">
                 <div className="flex items-center gap-8">
                   <div className="flex flex-col">
-                    <span className="text-[10px] text-slate-600 font-black uppercase tracking-[0.3em] mb-2">Auth Level</span>
+                    <span className="text-[10px] text-slate-600 font-black uppercase tracking-[0.3em] mb-2">Account Type</span>
                     <span className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-3">
                        <Shield size={14} className="text-primary-accent" />
                        Level / {selectedUser.membershipStatus || 'active'}
@@ -1047,12 +1155,16 @@ export default function AdminDashboard() {
                   </div>
                 </div>
                 <div className="flex items-center gap-6">
-                  <span className="text-[9px] font-black uppercase text-slate-600 tracking-[0.2em] hidden sm:block">Admin Encrypted Link Active</span>
+                  <span className="text-[9px] font-black uppercase text-slate-600 tracking-[0.2em] hidden sm:block">Secure Admin Session Active</span>
                   <button 
-                    onClick={() => setSelectedUser(null)}
+                    onClick={() => {
+                      setSelectedUser(null);
+                      setIsModifyingDeadline(null);
+                      setNewDeadline('');
+                    }}
                     className="px-8 py-4 bg-primary-accent text-white rounded-2xl font-black uppercase tracking-widest text-[9px] hover:bg-primary-accent/80 transition-all shadow-xl shadow-primary-accent/20"
                   >
-                    Exit Profile
+                    Close Profile
                   </button>
                 </div>
               </div>

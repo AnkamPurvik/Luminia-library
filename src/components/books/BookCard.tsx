@@ -38,7 +38,7 @@ export function BookCard({ book, onReserve }: BookCardProps) {
               book.availableCopies <= 2 ? 'bg-amber-500 shadow-amber-500' : 'bg-primary-accent shadow-primary-accent'
             }`} />
             <span className="text-[10px] font-black text-white uppercase tracking-widest">
-              {book.availableCopies === 0 ? 'OUT OF CORE' : 
+              {book.availableCopies === 0 ? 'OUT OF STOCK' : 
                book.availableCopies <= 2 ? 'LOW AVAILABILITY' : 'AVAILABLE'}
             </span>
           </div>
@@ -76,7 +76,7 @@ export function BookCard({ book, onReserve }: BookCardProps) {
               : 'bg-amber-500 text-white hover:bg-amber-600 shadow-amber-500/20'
           }`}
         >
-          {isAvailable ? 'Borrow' : 'Request Access'}
+          {isAvailable ? 'Borrow' : 'Reserve Book'}
         </button>
       </div>
     </motion.div>

@@ -90,7 +90,7 @@ export default function ActivityTimeline() {
     <div className="p-10 max-w-6xl w-full mx-auto pb-32">
       <header className="mb-12 relative z-10">
         <h1 className="text-4xl font-black text-white tracking-tighter uppercase mb-2">Activity Timeline</h1>
-        <p className="text-slate-500 font-black uppercase tracking-[0.2em] text-[10px] mb-8">Monitoring real-time library operations and system logs.</p>
+        <p className="text-slate-500 font-black uppercase tracking-[0.2em] text-[10px] mb-8">Monitoring real-time library operations.</p>
         
         <div className="flex gap-4">
           <div className="relative flex-1 group invisible pointer-events-none">
@@ -110,7 +110,7 @@ export default function ActivityTimeline() {
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-20 text-slate-500">
               <Loader2 size={40} className="animate-spin mb-4 text-primary-accent" />
-              <p className="font-black uppercase tracking-[0.2em] text-[10px]">Synchronizing logs...</p>
+              <p className="font-black uppercase tracking-[0.2em] text-[10px]">Loading activity...</p>
             </div>
           ) : filteredLogs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-slate-500">

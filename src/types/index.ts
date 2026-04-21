@@ -31,9 +31,34 @@ export interface Transaction {
   bookId: string;
   issueDate: string;
   dueDate: string;
+  original_due_date?: string;
+  updated_due_date?: string;
   returnDate?: string;
   fineAmount: number;
   status: 'borrowed' | 'returned' | 'overdue';
+}
+
+export interface ChatMessage {
+  id: string;
+  sessionId: string;
+  senderId: string;
+  senderName: string;
+  senderRole: 'user' | 'admin';
+  text: string;
+  timestamp: string;
+  read: boolean;
+}
+
+export interface ChatSession {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  status: 'open' | 'closed';
+  lastMessage: string;
+  lastMessageAt: string;
+  unreadByAdmin: number;
+  urgency: 'low' | 'medium' | 'high';
 }
 
 export interface Reservation {

@@ -434,7 +434,7 @@ export default function UserDashboard() {
           <div className="absolute inset-0 bg-primary-accent/20 blur-xl animate-pulse rounded-full"></div>
           <Loader2 className="h-10 w-10 text-primary-accent animate-spin relative z-10" />
         </div>
-        <p className="mt-8 text-slate-500 font-black uppercase tracking-[0.3em] text-[10px] animate-pulse">Syncing User Profile...</p>
+        <p className="mt-8 text-slate-500 font-black uppercase tracking-[0.3em] text-[10px] animate-pulse">Loading Your Profile...</p>
       </div>
     );
   }
@@ -444,7 +444,7 @@ export default function UserDashboard() {
       <header className="mb-12 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-4xl font-black text-white tracking-tighter uppercase">My Dashboard</h1>
-          <p className="text-slate-500 font-black uppercase tracking-[0.2em] text-[10px] mt-2">Manage your current loans and active reservations.</p>
+          <p className="text-slate-500 font-black uppercase tracking-[0.2em] text-[10px] mt-2">Manage your current loans and reservations.</p>
         </div>
         
         {profile && (
@@ -528,7 +528,7 @@ export default function UserDashboard() {
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-black text-white flex items-center gap-3 uppercase tracking-tight">
                   <AlertCircle size={24} className="text-amber-400" />
-                  Live Sync status
+                  Notifications
                 </h2>
               </div>
               <div className="space-y-3">
@@ -550,33 +550,42 @@ export default function UserDashboard() {
                           : 'bg-white/5 border-white/10'
                       }`}
                     >
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${
-                          isHighPriority ? 'bg-primary-accent/10 text-primary-accent' : 'bg-amber-400/10 text-amber-500'
+                      <div className="flex items-center gap-4">
+                        <div className={`p-3 rounded-xl border shrink-0 ${
+                          notif.type === 'update' 
+                            ? 'bg-primary-accent/10 text-primary-accent border-primary-accent/20' 
+                            : 'bg-amber-400/10 text-amber-500 border-amber-400/20'
                         }`}>
-                          <BookOpen size={18} />
+                          {notif.type === 'update' ? <Calendar size={20} /> : <BookOpen size={20} />}
                         </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-0.5">
-                            {isHighPriority && (
-                              <span className="text-[10px] uppercase font-black bg-primary-accent text-white px-1.5 py-0.5 rounded-md tracking-widest">
-                                URGENT
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
+                            {notif.type === 'update' && (
+                              <span className="text-[9px] uppercase font-black bg-primary-accent/20 text-primary-accent px-2 py-0.5 rounded-md border border-primary-accent/30 tracking-widest">
+                                SCHEDULE UPDATE
                               </span>
                             )}
-                            <p className="text-sm font-bold text-white">
-                              {notif.message}
+                            {notif.type === 'availability' && (
+                              <span className="text-[9px] uppercase font-black bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-md border border-emerald-400/20 tracking-widest">
+                                READY FOR PICKUP
+                              </span>
+                            )}
+                            <p className="text-sm font-black text-white tracking-tight uppercase">
+                              {notif.type === 'update' ? 'Return Schedule Modified' : 'Reservation Available'}
                             </p>
                           </div>
+                          <p className="text-xs font-bold text-slate-400 leading-relaxed mb-2 uppercase tracking-wide">
+                            {notif.message}
+                          </p>
                           <div className="flex items-center gap-3">
-                            <p className={`text-[10px] font-bold uppercase ${
-                              isHighPriority ? 'text-indigo-400' : 'text-amber-600'
-                            }`}>
-                              {new Date(notif.createdAt).toLocaleString()}
+                            <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest flex items-center gap-1.5">
+                              <Clock size={10} />
+                              {new Date(notif.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                             </p>
                             {isExpiring && (
-                              <div className="flex items-center gap-1 text-[10px] font-black text-rose-500 uppercase">
-                                <Clock size={10} />
-                                Held for {hoursLeft}h
+                              <div className="flex items-center gap-1.5 text-[10px] font-black text-rose-500 uppercase tracking-widest">
+                                <AlertCircle size={10} />
+                                Reserved for {hoursLeft}h
                               </div>
                             )}
                           </div>
@@ -645,15 +654,15 @@ export default function UserDashboard() {
                               )}
                             </div>
                             <div>
-                              <h3 className="text-lg font-black text-white uppercase tracking-tighter">{item.bookTitle || `CORE ASSET: ${item.bookId}`}</h3>
+                              <h3 className="text-lg font-black text-white uppercase tracking-tighter">{item.bookTitle || `Book ID: ${item.bookId}`}</h3>
                               <div className="flex flex-wrap gap-x-6 gap-y-2 mt-2">
                                 <div className="flex items-center text-[10px] font-black text-slate-500 uppercase tracking-widest">
                                   <Calendar size={14} className="mr-2 text-primary-accent" />
-                                  ISSUED {new Date(item.issueDate).toLocaleDateString('en-GB')}
+                                  BORROWED {new Date(item.issueDate).toLocaleDateString('en-GB')}
                                 </div>
                                 <div className={`flex items-center text-[10px] font-black uppercase tracking-widest ${isOverdue ? 'text-rose-500' : 'text-slate-400'}`}>
                                   <Clock size={14} className="mr-2" />
-                                  SYNC DUE: {new Date(item.dueDate).toLocaleDateString('en-GB')}
+                                  DUE DATE: {new Date(item.dueDate).toLocaleDateString('en-GB')}
                                   {isOverdue && <span className="ml-3 text-[8px] uppercase font-black bg-rose-500 text-white px-2 py-0.5 rounded shadow-lg animate-pulse">OVERDUE</span>}
                                 </div>
                               </div>
@@ -696,7 +705,7 @@ export default function UserDashboard() {
                     <CheckCircle2 size={32} />
                   </div>
                   <h3 className="text-white font-black uppercase tracking-tight">No active loans</h3>
-                  <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest max-w-xs mt-2">Explore the digital archives and find your next read.</p>
+                  <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest max-w-xs mt-2">Explore the library catalog and find your next read.</p>
                 </div>
               )}
             </AnimatePresence>
@@ -744,7 +753,7 @@ export default function UserDashboard() {
               ) : (
                 <div className="sm:col-span-2 glass-panel border-white/5 border-dashed rounded-3xl py-12 flex flex-col items-center justify-center text-center opacity-40">
                   <Bookmark size={32} className="text-slate-600 mb-4" />
-                  <p className="text-slate-600 font-black uppercase tracking-[0.2em] text-[10px]">No active reservations trace found in current sync.</p>
+                  <p className="text-slate-600 font-black uppercase tracking-[0.2em] text-[10px]">No active reservations found.</p>
                 </div>
               )}
             </div>
@@ -788,7 +797,7 @@ export default function UserDashboard() {
                 onClick={handleUpgrade}
                 className="w-full py-4 bg-white text-primary-accent rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] hover:scale-[1.02] transition-all active:scale-95 shadow-xl relative z-10"
               >
-                Access Pro Status
+                Upgrade to Pro
               </button>
             )}
           </div>

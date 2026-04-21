@@ -42,7 +42,7 @@ export default function AdminBookDetail() {
     };
     fetchBook();
 
-    // Real-time Transactions Sync
+    // Real-time Activity Updates
     const q = query(
       collection(db, 'transactions'),
       where('bookId', '==', id)
@@ -112,7 +112,7 @@ export default function AdminBookDetail() {
           <div className="absolute inset-0 bg-primary-accent/20 blur-xl animate-pulse rounded-full"></div>
           <Loader2 className="h-10 w-10 text-primary-accent animate-spin relative z-10" />
         </div>
-        <p className="mt-8 text-slate-500 font-black uppercase tracking-[0.3em] text-[10px] animate-pulse">Syncing Audit Logs...</p>
+        <p className="mt-8 text-slate-500 font-black uppercase tracking-[0.3em] text-[10px] animate-pulse">Loading Activity Logs...</p>
       </div>
     );
   }
@@ -135,7 +135,7 @@ export default function AdminBookDetail() {
           <div className="p-2.5 bg-white/5 rounded-xl group-hover:bg-primary-accent/10 border border-white/5 transition-all">
             <ArrowLeft size={16} />
           </div>
-          Dashboard Archive
+          Back to Dashboard
         </button>
         
         <div className="flex gap-3">
@@ -143,7 +143,7 @@ export default function AdminBookDetail() {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary-accent transition-colors" size={16} />
             <input 
               type="text"
-              placeholder="Search history archives..."
+              placeholder="Search history..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-12 pr-6 py-3 bg-white/5 border border-white/5 rounded-2xl text-[10px] font-black uppercase tracking-widest focus:ring-4 focus:ring-primary-accent/10 focus:border-primary-accent/30 outline-none w-72 transition-all shadow-inner placeholder-slate-600 text-white"
@@ -182,10 +182,10 @@ export default function AdminBookDetail() {
             
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
               {[
-                { label: 'Movement Logs', value: transactions.length, icon: History, color: 'text-indigo-400' },
-                { label: 'Active Sync', value: transactions.filter(t => t.status === 'borrowed').length, icon: Clock, color: 'text-amber-400' },
-                { label: 'Avg Cycle', value: '12 Days', icon: Calendar, color: 'text-emerald-400' },
-                { label: 'System Revenue', value: `₹${transactions.reduce((acc, t) => acc + calculateLateFee(t.expected_return, t.returned_at), 0)}`, icon: IndianRupee, color: 'text-rose-400' },
+                { label: 'Activity Logs', value: transactions.length, icon: History, color: 'text-indigo-400' },
+                { label: 'Current Loans', value: transactions.filter(t => t.status === 'borrowed').length, icon: Clock, color: 'text-amber-400' },
+                { label: 'Avg Loan Period', value: '12 Days', icon: Calendar, color: 'text-emerald-400' },
+                { label: 'Total Fines', value: `₹${transactions.reduce((acc, t) => acc + calculateLateFee(t.expected_return, t.returned_at), 0)}`, icon: IndianRupee, color: 'text-rose-400' },
               ].map((stat, i) => (
                 <div key={i} className="bg-white/5 p-5 rounded-3xl border border-white/5 shadow-inner">
                   <div className={`${stat.color} mb-2`}><stat.icon size={18} /></div>
@@ -203,11 +203,11 @@ export default function AdminBookDetail() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-2xl font-black text-white tracking-tighter flex items-center gap-4 uppercase">
             <History className="text-primary-accent" size={28} />
-            Movement History & Audit
+            Borrowing History & Activity
           </h2>
           <div className="flex items-center gap-3 text-[10px] font-black text-slate-500 uppercase tracking-widest bg-white/5 px-5 py-2.5 rounded-xl border border-white/5 shadow-inner">
             <div className="w-2 h-2 rounded-full bg-primary-accent shadow-[0_0_8px_rgba(79,70,229,0.5)]" />
-            Synchronized Archives
+            Live History
           </div>
         </div>
 
@@ -258,7 +258,7 @@ export default function AdminBookDetail() {
                       {/* Audit Details */}
                       <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
                         <div>
-                          <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mb-2">Borrowed Core</p>
+                          <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mb-2">Borrowed On</p>
                           <div className="flex items-center gap-3 text-white font-black text-sm tracking-tight">
                             <TrendingDown size={14} className="text-primary-accent" />
                             {new Date(t.borrowed_at).toLocaleDateString('en-GB')}
@@ -269,7 +269,7 @@ export default function AdminBookDetail() {
                         </div>
 
                         <div>
-                          <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mb-2">Sync Deadline</p>
+                          <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mb-2">Due Date</p>
                           <div className="flex items-center gap-3 text-white font-black text-sm tracking-tight">
                             <Calendar size={14} className="text-secondary-accent" />
                             {new Date(t.expected_return).toLocaleDateString('en-GB')}
@@ -277,7 +277,7 @@ export default function AdminBookDetail() {
                         </div>
 
                         <div>
-                          <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mb-2">Return Sync</p>
+                          <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mb-2">Returned On</p>
                           <div className="flex items-center gap-3 text-white font-black text-sm tracking-tight">
                             <TrendingUp size={14} className={isReturned ? 'text-emerald-400' : 'text-slate-700'} />
                             {isReturned ? (
@@ -300,7 +300,7 @@ export default function AdminBookDetail() {
                           delta <= 0 ? (
                             <div className="flex items-center gap-3 bg-emerald-500/10 text-emerald-400 px-5 py-2.5 rounded-xl border border-emerald-400/20 shadow-inner">
                               <CheckCircle2 size={16} />
-                              <span className="text-[10px] font-black uppercase tracking-widest">Archive Complete</span>
+                              <span className="text-[10px] font-black uppercase tracking-widest">Returned on Time</span>
                             </div>
                           ) : (
                             <div className="flex items-center gap-3 bg-rose-500/10 text-rose-400 px-5 py-2.5 rounded-xl border border-rose-400/20 shadow-inner">
@@ -316,7 +316,7 @@ export default function AdminBookDetail() {
                         ) : (
                           <div className="flex items-center gap-3 bg-primary-accent/10 text-primary-accent px-5 py-2.5 rounded-xl border border-primary-accent/20 shadow-inner">
                             <Clock size={16} className="animate-pulse" />
-                            <span className="text-[10px] font-black uppercase tracking-widest">Active Cycle</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest">Currently Borrowed</span>
                           </div>
                         )}
 
@@ -324,7 +324,7 @@ export default function AdminBookDetail() {
                           <div className={`flex items-center justify-between p-3.5 rounded-2xl border ${
                             isReturned ? 'bg-white/5 border-white/5 text-slate-400' : 'bg-rose-500/10 border-rose-500/20 text-rose-500 shadow-inner'
                           }`}>
-                            <span className="text-[8px] font-black uppercase tracking-[0.2em]">Audit Fine</span>
+                            <span className="text-[8px] font-black uppercase tracking-[0.2em]">Fine Amount</span>
                             <span className="text-sm font-black flex items-center">
                               <IndianRupee size={12} className="mr-0.5" />
                               {lateFee}
@@ -343,8 +343,8 @@ export default function AdminBookDetail() {
                <div className="bg-white/5 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-white/5">
                  <History size={40} className="text-slate-600" />
                </div>
-               <h3 className="text-xl font-black text-white uppercase tracking-tighter">No audit movement</h3>
-               <p className="text-slate-500 font-black uppercase tracking-widest text-[10px] mt-2">This collection core has not been accessed by members yet.</p>
+               <h3 className="text-xl font-black text-white uppercase tracking-tighter">No borrowing history</h3>
+               <p className="text-slate-500 font-black uppercase tracking-widest text-[10px] mt-2">This book has not been borrowed by any members yet.</p>
             </div>
           )}
         </div>

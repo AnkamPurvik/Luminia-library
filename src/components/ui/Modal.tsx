@@ -11,6 +11,7 @@ interface ModalProps {
   confirmLabel?: string;
   cancelLabel?: string;
   onConfirm?: () => void;
+  fullScreenMobile?: boolean;
 }
 
 export function Modal({ 
@@ -21,7 +22,8 @@ export function Modal({
   type = 'default', 
   confirmLabel, 
   cancelLabel = 'Cancel', 
-  onConfirm 
+  onConfirm,
+  fullScreenMobile = false
 }: ModalProps) {
   
   const getColors = () => {
@@ -38,7 +40,7 @@ export function Modal({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 max-md:p-0">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -51,32 +53,34 @@ export function Modal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="relative bg-slate-900 w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden border border-white/5"
+            className={`relative bg-slate-900 w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden border border-white/5 ${
+              fullScreenMobile ? 'max-md:rounded-none max-md:max-w-full max-md:h-full max-md:max-h-full' : 'max-md:rounded-2xl max-md:mx-4'
+            }`}
           >
-            <div className={`p-8 flex items-start gap-5 ${colors.bg}`}>
-              <div className="mt-1 p-3 bg-white/5 rounded-2xl border border-white/5">
+            <div className={`p-6 sm:p-8 flex items-start gap-4 sm:gap-5 ${colors.bg}`}>
+              <div className="mt-1 p-3 bg-white/5 rounded-2xl border border-white/5 shrink-0">
                 {colors.icon}
               </div>
-              <div className="flex-1">
-                <h3 className="text-xl font-black text-white leading-tight uppercase tracking-tight">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg sm:text-xl font-black text-white leading-tight uppercase tracking-tight">
                   {title}
                 </h3>
-                <div className="mt-3 text-slate-400 text-xs font-bold uppercase tracking-widest leading-relaxed">
+                <div className="mt-3 text-slate-400 text-xs sm:text-sm font-bold uppercase tracking-widest leading-relaxed">
                   {children}
                 </div>
               </div>
               <button 
                 onClick={onClose}
-                className="text-slate-500 hover:text-white transition-colors p-1"
+                className="text-slate-500 hover:text-white transition-colors p-1 min-h-[44px] min-w-[44px] flex items-center justify-center"
               >
                 <X size={20} />
               </button>
             </div>
             
-            <div className="p-8 bg-white/5 border-t border-white/5 flex items-center justify-end gap-4">
+            <div className="p-6 sm:p-8 bg-white/5 border-t border-white/5 flex items-center justify-end gap-4">
               <button
                 onClick={onClose}
-                className="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-white transition-colors"
+                className="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-white transition-colors min-h-[48px]"
               >
                 {cancelLabel}
               </button>
@@ -86,7 +90,7 @@ export function Modal({
                     onConfirm();
                     onClose();
                   }}
-                  className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest text-white shadow-xl transition-all active:scale-95 ${colors.button}`}
+                  className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest text-white shadow-xl transition-all active:scale-95 min-h-[48px] ${colors.button}`}
                 >
                   {confirmLabel || 'Confirm'}
                 </button>

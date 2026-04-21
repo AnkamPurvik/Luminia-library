@@ -217,9 +217,9 @@ export default function LuminaPro() {
                   <header>
                     <div className="flex items-center justify-between mb-4">
                       <h2 className="text-2xl font-black text-white uppercase tracking-tighter font-sans">UPI Gateway</h2>
-                      <div className="px-3 py-1 bg-emerald-400/10 text-emerald-400 text-[8px] font-black rounded-lg border border-emerald-400/20 uppercase tracking-[0.2em]">Secure Node</div>
+                      <div className="px-3 py-1 bg-emerald-400/10 text-emerald-400 text-[8px] font-black rounded-lg border border-emerald-400/20 uppercase tracking-[0.2em]">Secure Payment</div>
                     </div>
-                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-relaxed">Scan the dynamic QR or enter your UPI identity to synchronize payment.</p>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-relaxed">Scan the dynamic QR or enter your UPI ID to complete payment.</p>
                   </header>
 
                   {/* QR Simulation */}
@@ -254,7 +254,7 @@ export default function LuminaPro() {
                       <Shield size={18} className="text-secondary-accent flex-shrink-0" />
                       <div>
                         <p className="text-[10px] text-white font-black uppercase tracking-tight">Encrypted Transaction</p>
-                        <p className="text-[9px] text-slate-500 font-bold uppercase leading-relaxed mt-1">256-bit SSL protection active. Your VPA identity is never stored raw.</p>
+                        <p className="text-[9px] text-slate-500 font-bold uppercase leading-relaxed mt-1">256-bit SSL protection active. Your VPA ID is never stored raw.</p>
                       </div>
                     </div>
                   </div>
