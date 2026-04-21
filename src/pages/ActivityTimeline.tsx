@@ -52,10 +52,10 @@ export default function ActivityTimeline({ searchQuery = '' }: { searchQuery?: s
   };
 
   const filteredLogs = logs.filter(log => 
-    log.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    log.details.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    log.action?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    log.details?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     log.user?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    log.type.toLowerCase().includes(searchQuery.toLowerCase())
+    log.type?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const getStatusStyles = (status: ActivityLog['status']) => {
@@ -88,8 +88,8 @@ export default function ActivityTimeline({ searchQuery = '' }: { searchQuery?: s
     return <Info size={16} className="text-white" />;
   };
 
-  const getIconBg = (status: ActivityLog['status']) => {
-    switch (status) {
+  const getIconBg = (log: ActivityLog) => {
+    switch (log.status) {
       case 'SUCCESS': return 'bg-emerald-500';
       case 'WARNING': return 'bg-amber-400';
       case 'INFO': return log.type === 'chat' ? 'bg-indigo-500' : 'bg-blue-500';
@@ -139,7 +139,7 @@ export default function ActivityTimeline({ searchQuery = '' }: { searchQuery?: s
               className="relative flex gap-8 group"
             >
               {/* Timeline Dot/Icon */}
-              <div className={`relative z-10 w-12 h-12 rounded-2xl border-2 border-bg-dark shadow-xl flex items-center justify-center shrink-0 ${getIconBg(log.status)}`}>
+              <div className={`relative z-10 w-12 h-12 rounded-2xl border-2 border-bg-dark shadow-xl flex items-center justify-center shrink-0 ${getIconBg(log)}`}>
                 {getIcon(log)}
               </div>
 

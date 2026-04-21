@@ -72,7 +72,7 @@ export interface Reservation {
 
 export interface ActivityLog {
   id: string;
-  type: 'user' | 'admin' | 'system' | 'member';
+  type: 'user' | 'admin' | 'system' | 'member' | 'chat';
   user?: {
     name: string;
     photoURL?: string;
