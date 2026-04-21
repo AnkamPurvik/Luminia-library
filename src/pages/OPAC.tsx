@@ -235,13 +235,22 @@ export default function OPAC({ searchQuery: globalSearch, onSearchChange: setGlo
         const dueDate = new Date();
         dueDate.setDate(dueDate.getDate() + 14); // 2 weeks
 
+        // Fetch actual member name before creating transaction
+        const userSnap = await getDoc(doc(db, 'users', user.uid));
+        const realName = userSnap.exists() ? (userSnap.data().name || userSnap.data().displayName || user.displayName) : user.displayName;
+
         const transactionData = {
           userId: user.uid,
+          userName: realName || 'Member',
+          userEmail: user.email || '',
           bookId: book.id,
           bookTitle: book.title,
           bookCover: book.coverUrl || '',
-          issueDate: new Date().toISOString(),
-          dueDate: dueDate.toISOString(),
+          borrowed_at: new Date().toISOString(), // Precision timestamp
+          expected_return: dueDate.toISOString(), // System deadline
+          returned_at: null, // Scanned back later
+          issueDate: new Date().toISOString(), // Fallback
+          dueDate: dueDate.toISOString(), // Fallback
           fineAmount: 0,
           status: 'borrowed'
         };
@@ -293,47 +302,55 @@ export default function OPAC({ searchQuery: globalSearch, onSearchChange: setGlo
   }, [books, globalSearch]);
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-bg-dark selection:bg-primary-accent/30">
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {!user && !isAuthLoading ? (
-          <div className="py-12 space-y-24">
+          <div className="py-20 space-y-32">
             {/* Hero Section */}
-            <div className="flex flex-col items-center text-center px-4">
+            <div className="flex flex-col items-center text-center px-4 relative overflow-hidden">
+              {/* Decorative blobs */}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-primary-accent/10 rounded-full blur-[120px] -z-10 animate-pulse"></div>
+              <div className="absolute top-40 left-1/4 w-[300px] h-[300px] bg-secondary-accent/10 rounded-full blur-[80px] -z-10"></div>
+              
               <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-indigo-50 p-4 rounded-2xl mb-8"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-white/5 backdrop-blur-3xl p-5 rounded-[2rem] mb-10 border border-white/10 shadow-2xl"
               >
-                <Library size={48} className="text-indigo-600" />
+                <Library size={56} className="text-primary-accent" />
               </motion.div>
+              
               <motion.h2 
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="text-4xl md:text-5xl font-extrabold text-slate-900 mb-6 tracking-tight"
+                className="text-5xl md:text-7xl font-black text-white mb-8 tracking-tighter leading-tight uppercase"
               >
-                The Future of <span className="text-indigo-600">Knowledge Management</span>
+                EXPLORE YOUR <span className="text-primary-accent">KNOWLEDGE UNIVERSE</span>
               </motion.h2>
+              
               <motion.p 
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="text-lg text-slate-600 max-w-2xl mb-10 leading-relaxed"
+                className="text-xl text-slate-400 max-w-2xl mb-12 leading-relaxed font-medium"
               >
-                Experience the next generation of library systems. Browse thousands of titles, 
-                manage your loans effortlessly, and get notified instantly when your 
-                reserved books become available.
+                The ultimate gateway to millions of titles, academic resources, and literary treasures. 
+                Experience Luminia Library — where tradition meets high-performance management.
               </motion.p>
+              
               <motion.button 
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                onClick={handleLogin}
-                className="inline-flex items-center px-8 py-4 border border-transparent rounded-2xl text-lg font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-xl shadow-indigo-200 transition-all active:scale-95 group"
+                whileHover={{ scale: 1.05, boxShadow: "0 0 30px rgba(79, 70, 229, 0.4)" }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => navigate('/login')}
+                className="inline-flex items-center px-10 py-5 rounded-2xl text-base font-black uppercase tracking-[0.2em] text-white bg-primary-accent shadow-xl shadow-primary-accent/20 transition-all group"
               >
-                <LogIn className="mr-2 h-6 w-6 group-hover:translate-x-1 transition-transform" />
-                Get Started with Google
+                <LogIn className="mr-3 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                Access the Library
               </motion.button>
             </div>
 
@@ -341,68 +358,76 @@ export default function OPAC({ searchQuery: globalSearch, onSearchChange: setGlo
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 px-4">
               {[
                 {
-                  icon: <Zap className="text-amber-500" />,
-                  title: "Instant Reservations",
-                  desc: "Ran out of copies? Hit reserve and we'll hold the next available copy just for you."
+                  icon: <Zap className="text-secondary-accent" />,
+                  title: "Instant Sync",
+                  desc: "Real-time resource allocation. Reserve books and get notified the millisecond they are returned."
                 },
                 {
-                  icon: <Shield className="text-emerald-500" />,
-                  title: "Smart Tracking",
-                  desc: "Keep track of due dates and avoid fines with our automated notification system."
+                  icon: <Shield size={24} className="text-primary-accent" />,
+                  title: "Lumina Security",
+                  desc: "Military-grade access controls. Your borrowing history and personal data are fully protected."
                 },
                 {
-                  icon: <Sparkles className="text-purple-500" />,
-                  title: "AI Cataloging",
-                  desc: "Searching made simple with our intelligent genre and category matching system."
+                  icon: <Sparkles className="text-amber-400" />,
+                  title: "AI Catalog",
+                  desc: "Search the catalog with lightening speed using our optimized indexing and AI-driven categories."
                 }
               ].map((feature, i) => (
                 <motion.div
                   key={i}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 + (i * 0.1) }}
-                  className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow"
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1 }}
+                  className="glass-panel p-10 rounded-[2.5rem] hover:bg-white/10 transition-all cursor-default"
                 >
-                  <div className="bg-slate-50 w-12 h-12 rounded-xl flex items-center justify-center mb-6">
+                  <div className="bg-white/5 w-16 h-16 rounded-2xl flex items-center justify-center mb-8 border border-white/5 shadow-inner">
                     {feature.icon}
                   </div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-3">{feature.title}</h3>
-                  <p className="text-slate-600 leading-relaxed">{feature.desc}</p>
+                  <h3 className="text-2xl font-black text-white mb-4 tracking-tight uppercase">{feature.title}</h3>
+                  <p className="text-slate-400 leading-relaxed font-medium">{feature.desc}</p>
                 </motion.div>
               ))}
             </div>
 
             {/* Stats Section */}
-            <div className="bg-indigo-600 rounded-[3rem] p-12 text-white mx-4 flex flex-col md:flex-row items-center justify-around gap-12 shadow-2xl shadow-indigo-200">
-              <div className="text-center">
-                <p className="text-4xl font-black mb-2">5,000+</p>
-                <p className="text-indigo-100 font-medium uppercase tracking-widest text-xs">Curated Books</p>
+            <div className="bg-gradient-to-r from-primary-accent/10 via-secondary-accent/10 to-primary-accent/10 backdrop-blur-3xl rounded-[3.5rem] p-16 border border-white/5 mx-4 flex flex-col md:flex-row items-center justify-around gap-12 shadow-2xl relative overflow-hidden">
+              <div className="absolute inset-0 bg-primary-accent/5 animate-pulse"></div>
+              <div className="text-center relative z-10">
+                <p className="text-5xl font-black text-white mb-2 tracking-tighter">5,000+</p>
+                <p className="text-primary-accent font-black uppercase tracking-[0.3em] text-[10px]">TOTAL BOOKS</p>
               </div>
-              <div className="text-center">
-                <p className="text-4xl font-black mb-2">1,200+</p>
-                <p className="text-indigo-100 font-medium uppercase tracking-widest text-xs">Active Readers</p>
+              <div className="text-center relative z-10">
+                <p className="text-5xl font-black text-white mb-2 tracking-tighter">1,200+</p>
+                <p className="text-secondary-accent font-black uppercase tracking-[0.3em] text-[10px]">ACTIVE MEMBERS</p>
               </div>
-              <div className="text-center">
-                <p className="text-4xl font-black mb-2">99.9%</p>
-                <p className="text-indigo-100 font-medium uppercase tracking-widest text-xs">Uptime Service</p>
+              <div className="text-center relative z-10">
+                <p className="text-5xl font-black text-white mb-2 tracking-tighter">99.9%</p>
+                <p className="text-emerald-400 font-black uppercase tracking-[0.3em] text-[10px]">SYSTEM UPTIME</p>
               </div>
             </div>
           </div>
         ) : isLoading || isAuthLoading ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 className="h-10 w-10 text-indigo-600 animate-spin mb-4" />
-            <p className="text-slate-500 font-medium">Loading catalog...</p>
+          <div className="flex flex-col items-center justify-center py-40">
+            <div className="relative">
+              <div className="absolute inset-0 bg-primary-accent/20 blur-2xl animate-pulse rounded-full"></div>
+              <Loader2 className="h-12 w-12 text-primary-accent animate-spin relative z-10" />
+            </div>
+            <p className="text-slate-500 font-black uppercase tracking-[0.3em] text-[10px] mt-8 animate-pulse">Syncing Library Database...</p>
           </div>
         ) : error ? (
-          <div className="bg-rose-50 border border-rose-200 rounded-xl p-6 text-center">
-            <p className="text-rose-700 font-medium">{error}</p>
+          <div className="bg-rose-500/10 border border-rose-500/20 rounded-[2rem] p-10 text-center backdrop-blur-xl">
+            <p className="text-rose-400 font-black tracking-tight">{error}</p>
           </div>
         ) : (
-          <>
-            <div className="mb-6 flex items-center justify-between">
-              <p className="text-sm text-slate-500">
-                Showing <span className="font-semibold text-slate-900">{filteredBooks.length}</span> books
-              </p>
+          <div className="pt-8">
+            <div className="mb-10 flex items-center justify-between">
+              <div className="flex flex-col">
+                <h2 className="text-3xl font-black text-white tracking-tight uppercase">Library Catalog</h2>
+                <p className="text-slate-500 font-black uppercase tracking-[0.2em] text-[10px] mt-1">
+                  Exploring <span className="text-primary-accent font-black tracking-widest">{filteredBooks.length}</span> Active Titles
+                </p>
+              </div>
             </div>
 
             <AnimatePresence mode="popLayout">
@@ -434,14 +459,14 @@ export default function OPAC({ searchQuery: globalSearch, onSearchChange: setGlo
                   </p>
                   <button 
                     onClick={() => setGlobalSearch('')}
-                    className="mt-4 text-indigo-600 font-medium hover:text-indigo-700"
+                    className="mt-4 text-primary-accent font-black uppercase tracking-widest text-[10px] hover:text-white transition-colors border border-primary-accent/30 px-6 py-2 rounded-full"
                   >
                     Clear search
                   </button>
                 </motion.div>
               )}
             </AnimatePresence>
-          </>
+          </div>
         )}
       </main>
 

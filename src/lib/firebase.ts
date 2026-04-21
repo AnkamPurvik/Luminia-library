@@ -1,11 +1,15 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
-import firebaseConfig from '../../firebase-applet-config.json' with { type: 'json' };
+import { getFirestore, collection, addDoc, Timestamp } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
+import firebaseConfig from '../../firebase-applet-config.json';
+import { ActivityLog } from '../types';
+import toast from 'react-hot-toast';
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+export const storage = getStorage(app);
 
 export enum OperationType {
   CREATE = 'create',
@@ -55,5 +59,18 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     path
   }
   console.error('Firestore Error: ', JSON.stringify(errInfo));
+  toast.error(`${operationType.toUpperCase()} error: ${errInfo.error}`);
   throw new Error(JSON.stringify(errInfo));
+}
+export async function logActivity(log: Omit<ActivityLog, 'id' | 'timestamp'>) {
+  try {
+    await addDoc(collection(db, 'activity_logs'), {
+      ...log,
+      timestamp: new Date().toISOString(),
+      createdAt: Timestamp.now(),
+      userId: auth.currentUser?.uid || 'anonymous'
+    });
+  } catch (err) {
+    console.error('Logging error:', err);
+  }
 }

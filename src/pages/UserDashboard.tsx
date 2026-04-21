@@ -1,7 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { collection, query, where, onSnapshot, doc, updateDoc, getDoc, setDoc, addDoc, deleteDoc, getDocs, limit, orderBy } from 'firebase/firestore';
-import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
+import { updateProfile } from 'firebase/auth';
+import { db, auth, storage, handleFirestoreError, OperationType, logActivity } from '../lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { compressImage } from '../lib/image-utils';
 import { Transaction, Book, UserProfile, Reservation } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import toast from 'react-hot-toast';
@@ -26,6 +29,9 @@ export default function UserDashboard() {
   const [editName, setEditName] = useState('');
   const [editPhotoURL, setEditPhotoURL] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewURL, setPreviewURL] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [modalConfig, setModalConfig] = useState<{
     isOpen: boolean;
     title: string;
@@ -143,6 +149,13 @@ export default function UserDashboard() {
       await updateDoc(doc(db, 'transactions', transactionId), {
         dueDate: newDueDate.toISOString()
       });
+      await logActivity({
+        type: 'user',
+        user: { name: auth.currentUser?.displayName || 'Member' },
+        action: `Renewed book loan`,
+        details: `Transaction ID: ${transactionId}`,
+        status: 'SUCCESS'
+      });
       toast.success('Book renewed successfully!');
     } catch (err) {
       handleFirestoreError(err, OperationType.UPDATE, `transactions/${transactionId}`);
@@ -174,6 +187,13 @@ export default function UserDashboard() {
         newAvailable = (bookData?.availableCopies || 0) + 1;
         await updateDoc(bookRef, {
           availableCopies: newAvailable
+        });
+        await logActivity({
+          type: 'user',
+          user: { name: auth.currentUser?.displayName || 'Member' },
+          action: `Returned book: ${bookData?.title || 'Unknown'}`,
+          details: `Transaction ID: ${transaction.id}`,
+          status: 'SUCCESS'
         });
       }
 
@@ -293,9 +313,16 @@ export default function UserDashboard() {
         });
       }
 
-      // 4. Mark Notification as Read
       await updateDoc(doc(db, 'notifications', notif.id), {
         read: true
+      });
+
+      await logActivity({
+        type: 'user',
+        user: { name: auth.currentUser?.displayName || 'Member' },
+        action: `Borrowed book via reservation: ${notif.bookTitle}`,
+        details: `Book ID: ${notif.bookId}`,
+        status: 'SUCCESS'
       });
 
       toast.success('Book borrowed successfully!', { id: 'one-click' });
@@ -319,19 +346,31 @@ export default function UserDashboard() {
     if (!profile) return;
     setIsSavingProfile(true);
     try {
+      let finalPhotoURL = profile.photoURL || '';
+
+      if (selectedFile) {
+        toast.loading('Optimizing avatar...', { id: 'upload' });
+        const compressedFile = await compressImage(selectedFile);
+        
+        toast.loading('Uploading avatar...', { id: 'upload' });
+        const storageRef = ref(storage, `avatars/${profile.id}/${compressedFile.name}`);
+        const snapshot = await uploadBytes(storageRef, compressedFile);
+        finalPhotoURL = await getDownloadURL(snapshot.ref);
+        toast.success('Avatar optimized & uploaded!', { id: 'upload' });
+      }
+
       await updateDoc(doc(db, 'users', profile.id), {
         name: editName,
-        photoURL: editPhotoURL
+        photoURL: finalPhotoURL
       });
       
       // Update Firebase Auth profile as well if possible
       const user = auth.currentUser;
       if (user) {
         try {
-          const { updateProfile: updateFirebaseProfile } = await import('firebase/auth');
-          await updateFirebaseProfile(user, { 
+          await updateProfile(user, { 
             displayName: editName,
-            photoURL: editPhotoURL 
+            photoURL: finalPhotoURL 
           });
         } catch (e) {
           console.error("Auth profile update skipped:", e);
@@ -339,6 +378,15 @@ export default function UserDashboard() {
       }
       
       setIsEditingProfile(false);
+      setSelectedFile(null);
+      setPreviewURL(null);
+      await logActivity({
+        type: 'user',
+        user: { name: editName },
+        action: `Updated profile details`,
+        details: `Name changed to ${editName}`,
+        status: 'INFO'
+      });
       toast.success('Profile updated successfully');
     } catch (err) {
       handleFirestoreError(err, OperationType.UPDATE, `users/${profile.id}`);
@@ -360,7 +408,17 @@ export default function UserDashboard() {
       confirmLabel: 'Cancel Reservation',
       onConfirm: async () => {
         try {
-          await deleteDoc(doc(db, 'reservations', id));
+          const resRef = doc(db, 'reservations', id);
+          const resSnap = await getDoc(resRef);
+          const resData = resSnap.data();
+          await deleteDoc(resRef);
+          await logActivity({
+            type: 'user',
+            user: { name: auth.currentUser?.displayName || 'Member' },
+            action: `Cancelled reservation`,
+            details: `Book ID: ${resData?.bookId}`,
+            status: 'WARNING'
+          });
           toast.success('Reservation cancelled.');
         } catch (err) {
           handleFirestoreError(err, OperationType.DELETE, `reservations/${id}`);
@@ -371,33 +429,55 @@ export default function UserDashboard() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-8 w-8 text-indigo-600 animate-spin" />
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <div className="relative">
+          <div className="absolute inset-0 bg-primary-accent/20 blur-xl animate-pulse rounded-full"></div>
+          <Loader2 className="h-10 w-10 text-primary-accent animate-spin relative z-10" />
+        </div>
+        <p className="mt-8 text-slate-500 font-black uppercase tracking-[0.3em] text-[10px] animate-pulse">Syncing User Profile...</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <header className="mb-12 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight font-display">My Dashboard</h1>
-          <p className="text-slate-500 mt-1">Manage your borrowed books and active reservations.</p>
+          <h1 className="text-4xl font-black text-white tracking-tighter uppercase">My Dashboard</h1>
+          <p className="text-slate-500 font-black uppercase tracking-[0.2em] text-[10px] mt-2">Manage your current loans and active reservations.</p>
         </div>
         
         {profile && (
-          <div className="bg-white border border-slate-200 rounded-xl p-4 flex items-center gap-4 shadow-sm">
+          <div className="glass-panel rounded-3xl p-6 flex items-center gap-6 shadow-2xl">
             <div className="relative group">
-              <div className="h-12 w-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold overflow-hidden">
+              <div className="h-14 w-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-primary-accent font-bold overflow-hidden shadow-inner">
                 {profile.photoURL ? (
-                  <img src={profile.photoURL} alt="" className="h-full w-full object-cover" />
+                  <img src={previewURL || profile.photoURL} alt="" className="h-full w-full object-cover" />
                 ) : (
-                  <UserIcon size={24} />
+                  previewURL ? (
+                    <img src={previewURL} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <UserIcon size={28} />
+                  )
                 )}
               </div>
+              <input 
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setSelectedFile(file);
+                    setPreviewURL(URL.createObjectURL(file));
+                    setIsEditingProfile(true);
+                  }
+                }}
+              />
               <button 
-                onClick={() => setIsEditingProfile(true)}
-                className="absolute -bottom-1 -right-1 p-1 bg-white rounded-full shadow-md border border-slate-100 text-indigo-600 hover:scale-110 transition-all"
+                onClick={() => fileInputRef.current?.click()}
+                className="absolute -bottom-2 -right-2 p-1.5 bg-primary-accent text-white rounded-lg shadow-xl border-2 border-bg-dark hover:scale-110 transition-all"
               >
                 <Camera size={12} />
               </button>
@@ -405,40 +485,34 @@ export default function UserDashboard() {
             {isEditingProfile ? (
               <div className="flex flex-col gap-2 min-w-[200px]">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Edit Profile</span>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Update Profile</span>
                   <div className="flex gap-1">
-                    <button onClick={() => setIsEditingProfile(false)} disabled={isSavingProfile} className="p-1 text-slate-400 hover:text-rose-600 transition-colors">
+                    <button onClick={() => setIsEditingProfile(false)} disabled={isSavingProfile} className="p-1 text-slate-500 hover:text-rose-500 transition-colors">
                       <X size={16} />
                     </button>
-                    <button onClick={handleUpdateProfile} disabled={isSavingProfile} className="p-1 text-indigo-600 hover:text-indigo-700 transition-colors">
+                    <button onClick={handleUpdateProfile} disabled={isSavingProfile} className="p-1 text-primary-accent hover:text-white transition-colors">
                       {isSavingProfile ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
                     </button>
                   </div>
                 </div>
                 <input 
-                  className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none w-full"
+                  className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-xs font-bold text-white focus:ring-2 focus:ring-primary-accent outline-none w-full"
                   value={editName}
                   onChange={e => setEditName(e.target.value)}
                   placeholder="Full Name"
                 />
-                <input 
-                  className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none w-full"
-                  value={editPhotoURL}
-                  onChange={e => setEditPhotoURL(e.target.value)}
-                  placeholder="Profile Photo URL"
-                />
               </div>
             ) : (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-4">
                 <div>
-                  <div className="flex items-center gap-1.5">
-                    <p className="text-sm font-bold text-slate-900">{profile.name}</p>
-                    {profile.isPro && <Sparkles size={14} className="text-amber-500 fill-amber-500" />}
+                  <div className="flex items-center gap-2">
+                    <p className="text-lg font-black text-white tracking-tight">{profile.name}</p>
+                    {profile.isPro && <Sparkles size={16} className="text-amber-400 fill-amber-400" />}
                   </div>
-                  <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">{profile.role}</p>
+                  <p className="text-[10px] text-primary-accent uppercase font-black tracking-widest">{profile.role} MEMBER</p>
                 </div>
-                <button onClick={() => setIsEditingProfile(true)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
-                  <Edit2 size={16} />
+                <button onClick={() => setIsEditingProfile(true)} className="p-2.5 text-slate-500 hover:text-primary-accent hover:bg-primary-accent/10 rounded-xl transition-all">
+                  <Edit2 size={18} />
                 </button>
               </div>
             )}
@@ -449,12 +523,12 @@ export default function UserDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-10">
           {/* Notifications Section */}
-          {notifications.length > 0 && (
+            {notifications.length > 0 && (
             <section>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                  <AlertCircle size={20} className="text-amber-500" />
-                  Notifications
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-black text-white flex items-center gap-3 uppercase tracking-tight">
+                  <AlertCircle size={24} className="text-amber-400" />
+                  Live Sync status
                 </h2>
               </div>
               <div className="space-y-3">
@@ -470,28 +544,26 @@ export default function UserDashboard() {
                       key={notif.id}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
-                      className={`border rounded-xl p-4 flex items-center justify-between transition-all ${
+                      className={`rounded-2xl p-6 flex items-center justify-between transition-all border shadow-2xl backdrop-blur-3xl ${
                         isHighPriority 
-                          ? 'bg-indigo-50 border-indigo-100 shadow-sm' 
-                          : 'bg-amber-50 border-amber-100'
+                          ? 'bg-primary-accent/10 border-primary-accent/20 shadow-primary-accent/5' 
+                          : 'bg-white/5 border-white/10'
                       }`}
                     >
                       <div className="flex items-center gap-3">
                         <div className={`p-2 rounded-lg ${
-                          isHighPriority ? 'bg-indigo-100 text-indigo-600' : 'bg-amber-100 text-amber-600'
+                          isHighPriority ? 'bg-primary-accent/10 text-primary-accent' : 'bg-amber-400/10 text-amber-500'
                         }`}>
                           <BookOpen size={18} />
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-0.5">
                             {isHighPriority && (
-                              <span className="text-[10px] uppercase font-black bg-indigo-600 text-white px-1.5 py-0.5 rounded-md tracking-wider">
-                                High Priority
+                              <span className="text-[10px] uppercase font-black bg-primary-accent text-white px-1.5 py-0.5 rounded-md tracking-widest">
+                                URGENT
                               </span>
                             )}
-                            <p className={`text-sm font-bold ${
-                              isHighPriority ? 'text-indigo-900' : 'text-amber-900'
-                            }`}>
+                            <p className="text-sm font-bold text-white">
                               {notif.message}
                             </p>
                           </div>
@@ -510,15 +582,11 @@ export default function UserDashboard() {
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3 ml-4">
+                      <div className="flex items-center gap-4 ml-6">
                         {notif.canOneClickBorrow && (
                           <button 
                             onClick={() => handleOneClickBorrow(notif)}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-colors shadow-sm ${
-                              isHighPriority 
-                                ? 'bg-indigo-600 text-white hover:bg-indigo-700' 
-                                : 'bg-amber-600 text-white hover:bg-amber-700'
-                            }`}
+                            className="flex items-center gap-2.5 px-6 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-xl bg-primary-accent text-white hover:bg-primary-accent/90 active:scale-95 shadow-primary-accent/20"
                           >
                             <ShoppingBag size={14} />
                             Borrow Now
@@ -526,9 +594,7 @@ export default function UserDashboard() {
                         )}
                         <button 
                           onClick={() => handleMarkAsRead(notif.id)}
-                          className={`text-xs font-bold uppercase tracking-wider ${
-                            isHighPriority ? 'text-indigo-400 hover:text-indigo-700' : 'text-amber-600 hover:text-amber-800'
-                          }`}
+                          className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-white transition-colors"
                         >
                           Dismiss
                         </button>
@@ -542,13 +608,13 @@ export default function UserDashboard() {
 
           {/* Borrowed Books Section */}
           <section>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                <BookOpen size={20} className="text-indigo-600" />
-                Currently Borrowed
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-2xl font-black text-white flex items-center gap-3 uppercase tracking-tight">
+                <BookOpen size={24} className="text-secondary-accent" />
+                Active Loans
               </h2>
-              <span className="bg-indigo-100 text-indigo-700 text-xs font-bold px-2.5 py-1 rounded-full">
-                {borrowedBooks.length} Items
+              <span className="bg-secondary-accent/10 text-secondary-accent text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-xl border border-secondary-accent/20">
+                {borrowedBooks.length} BOOKS
               </span>
             </div>
 
@@ -564,48 +630,48 @@ export default function UserDashboard() {
                         layout
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className={`bg-white border rounded-xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all ${
-                          isOverdue ? 'border-rose-200 bg-rose-50/30 shadow-sm' : 'border-slate-200 hover:border-indigo-200'
+                        className={`glass-panel rounded-3xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-6 transition-all border ${
+                          isOverdue ? 'border-rose-500/30 bg-rose-500/5 shadow-rose-500/5' : 'border-white/5 hover:border-white/10'
                         }`}
                       >
-                        <div className="flex items-center gap-4">
-                          <div className="h-16 w-12 bg-slate-100 rounded overflow-hidden flex-shrink-0 border border-slate-100">
-                            {item.bookCover ? (
-                              <img src={item.bookCover} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
-                            ) : (
-                              <div className="h-full w-full flex items-center justify-center text-slate-300">
-                                <BookOpen size={20} />
-                              </div>
-                            )}
-                          </div>
-                          <div>
-                            <h3 className="font-bold text-slate-900">{item.bookTitle || `Book ID: ${item.bookId}`}</h3>
-                            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1">
-                              <div className="flex items-center text-sm text-slate-500">
-                                <Calendar size={14} className="mr-1" />
-                                {new Date(item.issueDate).toLocaleDateString()}
-                              </div>
-                              <div className={`flex items-center text-sm font-medium ${isOverdue ? 'text-rose-600' : 'text-slate-600'}`}>
-                                <Clock size={14} className="mr-1" />
-                                Due: {new Date(item.dueDate).toLocaleDateString()}
-                                {isOverdue && <span className="ml-2 text-[10px] uppercase font-bold bg-rose-600 text-white px-1.5 py-0.5 rounded">Overdue</span>}
+                          <div className="flex items-center gap-6">
+                            <div className="h-20 w-16 bg-white/5 rounded-2xl overflow-hidden flex-shrink-0 border border-white/10 shadow-2xl relative group">
+                              {item.bookCover ? (
+                                <img src={item.bookCover} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" referrerPolicy="no-referrer" />
+                              ) : (
+                                <div className="h-full w-full flex items-center justify-center text-slate-700">
+                                  <BookOpen size={24} />
+                                </div>
+                              )}
+                            </div>
+                            <div>
+                              <h3 className="text-lg font-black text-white uppercase tracking-tighter">{item.bookTitle || `CORE ASSET: ${item.bookId}`}</h3>
+                              <div className="flex flex-wrap gap-x-6 gap-y-2 mt-2">
+                                <div className="flex items-center text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                                  <Calendar size={14} className="mr-2 text-primary-accent" />
+                                  ISSUED {new Date(item.issueDate).toLocaleDateString('en-GB')}
+                                </div>
+                                <div className={`flex items-center text-[10px] font-black uppercase tracking-widest ${isOverdue ? 'text-rose-500' : 'text-slate-400'}`}>
+                                  <Clock size={14} className="mr-2" />
+                                  SYNC DUE: {new Date(item.dueDate).toLocaleDateString('en-GB')}
+                                  {isOverdue && <span className="ml-3 text-[8px] uppercase font-black bg-rose-500 text-white px-2 py-0.5 rounded shadow-lg animate-pulse">OVERDUE</span>}
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
 
                         <div className="flex items-center gap-2">
                           {fine > 0 && (
-                            <div className="mr-4 text-right">
-                              <p className="text-[10px] text-slate-400 uppercase font-bold">Current Fine</p>
-                              <p className="text-rose-600 font-bold">₹{fine.toLocaleString('en-IN')}</p>
+                            <div className="mr-6 text-right">
+                              <p className="text-[10px] text-slate-600 uppercase font-black tracking-[0.2em] mb-1">Accumulated Fine</p>
+                              <p className="text-xl font-black text-rose-500 tracking-tighter">₹{fine.toLocaleString('en-IN')}</p>
                             </div>
                           )}
-                          <div className="flex gap-2">
+                          <div className="flex gap-3">
                             <button
                               onClick={() => handleRenew(item.id, item.dueDate)}
                               disabled={isRenewing === item.id || isOverdue}
-                              className="flex items-center justify-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-sm font-semibold hover:bg-slate-50 disabled:opacity-50 transition-all"
+                              className="flex items-center justify-center gap-2 px-5 py-3 glass-panel text-white/70 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-white/10 disabled:opacity-30 transition-all border border-white/10"
                             >
                               {isRenewing === item.id ? <RefreshCw size={16} className="animate-spin" /> : <RefreshCw size={16} />}
                               Renew
@@ -613,7 +679,7 @@ export default function UserDashboard() {
                             <button
                               onClick={() => handleReturn(item)}
                               disabled={isReturning === item.id}
-                              className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50 transition-all shadow-sm"
+                              className="flex items-center justify-center gap-2 px-5 py-3 bg-white/5 text-slate-400 rounded-xl text-xs font-black uppercase tracking-widest hover:text-rose-500 hover:bg-rose-500/10 disabled:opacity-30 transition-all border border-white/5"
                             >
                               {isReturning === item.id ? <Loader2 size={16} className="animate-spin" /> : <RotateCcw size={16} />}
                               Return
@@ -625,12 +691,12 @@ export default function UserDashboard() {
                   })}
                 </div>
               ) : (
-                <div className="bg-white border border-dashed border-slate-300 rounded-xl py-12 flex flex-col items-center justify-center text-center">
-                  <div className="bg-slate-50 p-4 rounded-full mb-4 text-slate-300">
+                <div className="glass-panel border-dashed border-white/10 rounded-[2rem] py-16 flex flex-col items-center justify-center text-center">
+                  <div className="bg-white/5 p-4 rounded-2xl mb-4 text-slate-500">
                     <CheckCircle2 size={32} />
                   </div>
-                  <h3 className="text-slate-900 font-semibold">No active loans</h3>
-                  <p className="text-slate-500 text-sm max-w-xs mt-1">Enjoy our catalog and find your next book!</p>
+                  <h3 className="text-white font-black uppercase tracking-tight">No active loans</h3>
+                  <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest max-w-xs mt-2">Explore the digital archives and find your next read.</p>
                 </div>
               )}
             </AnimatePresence>
@@ -639,11 +705,11 @@ export default function UserDashboard() {
           {/* Reservations Section */}
           <section>
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                <Bookmark size={20} className="text-indigo-600" />
+              <h2 className="text-2xl font-black text-white flex items-center gap-3 uppercase tracking-tight">
+                <Bookmark size={24} className="text-primary-accent" />
                 Active Reservations
               </h2>
-              <span className="bg-amber-100 text-amber-700 text-xs font-bold px-2.5 py-1 rounded-full">
+              <span className="bg-amber-400/10 text-amber-500 text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-xl border border-amber-400/20">
                 {reservations.length} Pending
               </span>
             </div>
@@ -651,20 +717,20 @@ export default function UserDashboard() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {reservations.length > 0 ? (
                 reservations.map((res) => (
-                  <div key={res.id} className="bg-white border border-slate-200 rounded-xl p-4 flex items-center justify-between shadow-sm">
-                    <div className="flex items-center gap-3">
-                      <div className="h-12 w-9 bg-slate-100 rounded overflow-hidden flex-shrink-0 border border-slate-100">
+                  <div key={res.id} className="glass-panel border-white/5 rounded-3xl p-5 flex items-center justify-between shadow-xl group hover:border-white/10 transition-all">
+                    <div className="flex items-center gap-4">
+                      <div className="h-14 w-10 bg-white/5 rounded-lg overflow-hidden flex-shrink-0 border border-white/10">
                         {res.bookCover ? (
                           <img src={res.bookCover} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
                         ) : (
-                          <div className="h-full w-full flex items-center justify-center text-slate-300">
+                          <div className="h-full w-full flex items-center justify-center text-slate-500">
                             <Bookmark size={14} />
                           </div>
                         )}
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-slate-900 line-clamp-1">{res.bookTitle || `Book ID: ${res.bookId}`}</p>
-                        <p className="text-[10px] text-slate-500 uppercase font-bold">Reserved {new Date(res.reservationDate).toLocaleDateString()}</p>
+                        <p className="text-sm font-black text-white uppercase tracking-tight line-clamp-1">{res.bookTitle || `Book ID: ${res.bookId}`}</p>
+                        <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest mt-1">Reserved {new Date(res.reservationDate).toLocaleDateString()}</p>
                       </div>
                     </div>
                     <button 
@@ -676,8 +742,9 @@ export default function UserDashboard() {
                   </div>
                 ))
               ) : (
-                <div className="sm:col-span-2 bg-slate-50/50 border border-dashed border-slate-200 rounded-xl py-8 flex flex-col items-center justify-center text-center">
-                  <p className="text-slate-400 text-sm">No active reservations.</p>
+                <div className="sm:col-span-2 glass-panel border-white/5 border-dashed rounded-3xl py-12 flex flex-col items-center justify-center text-center opacity-40">
+                  <Bookmark size={32} className="text-slate-600 mb-4" />
+                  <p className="text-slate-600 font-black uppercase tracking-[0.2em] text-[10px]">No active reservations trace found in current sync.</p>
                 </div>
               )}
             </div>
@@ -685,43 +752,46 @@ export default function UserDashboard() {
         </div>
 
         {/* Sidebar */}
-        <div className="space-y-6">
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-            <h3 className="font-bold text-slate-900 mb-4">Account Summary</h3>
+        <div className="space-y-8">
+          <div className="glass-panel border-white/5 rounded-[2rem] p-8 shadow-2xl">
+            <h3 className="text-lg font-black text-white uppercase tracking-tighter mb-6">Account Summary</h3>
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
-                <span className="text-xs font-bold text-slate-500 uppercase">Status</span>
-                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded uppercase">Active</span>
+              <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Status</span>
+                <span className="text-[10px] font-black text-emerald-400 bg-emerald-400/10 px-3 py-1 rounded-lg uppercase border border-emerald-400/20">Active</span>
               </div>
-              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
-                <span className="text-xs font-bold text-slate-500 uppercase">Total Fines</span>
-                <span className="text-sm font-bold text-rose-600">₹{totalFines.toLocaleString('en-IN')}</span>
+              <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Total Fines</span>
+                <span className="text-sm font-black text-rose-500">₹{totalFines.toLocaleString('en-IN')}</span>
               </div>
-              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
-                <span className="text-xs font-bold text-slate-500 uppercase">Limit</span>
-                <span className="text-sm font-bold text-slate-900">{profile.isPro ? 'Unlimited' : '5 Books'}</span>
+              <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Limit</span>
+                <span className="text-sm font-black text-white uppercase tracking-tight">{profile.isPro ? 'Unlimited' : '5 Books'}</span>
               </div>
             </div>
           </div>
 
-            <div className={`p-6 text-white rounded-2xl shadow-xl transition-all ${profile?.isPro ? 'bg-gradient-to-br from-amber-500 to-amber-600 shadow-amber-100' : 'bg-indigo-600 shadow-indigo-100'}`}>
-              <h3 className="font-bold text-lg mb-2 flex items-center gap-2">
-                {profile?.isPro ? <><Sparkles size={20} /> Lumina Pro Active</> : 'Lumina Pro'}
-              </h3>
-              <p className={`${profile?.isPro ? 'text-amber-50' : 'text-indigo-100'} text-sm mb-6 leading-relaxed`}>
-                {profile?.isPro 
-                  ? 'You are enjoying unlimited borrowing and premium features across the entire library.' 
-                  : 'Upgrade to Pro for unlimited borrowing, extended due dates, and home delivery services.'}
-              </p>
-              {!profile?.isPro && (
-                <button 
-                  onClick={handleUpgrade}
-                  className="w-full py-3 bg-white text-indigo-600 rounded-xl font-bold text-sm hover:bg-indigo-50 transition-all active:scale-95 shadow-sm"
-                >
-                  Upgrade Membership
-                </button>
-              )}
+          <div className={`p-8 rounded-[2rem] shadow-2xl transition-all relative overflow-hidden group ${profile?.isPro ? 'bg-gradient-to-br from-amber-500 to-amber-600' : 'bg-gradient-to-br from-primary-accent to-secondary-accent'}`}>
+            <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-125 transition-transform">
+              <Sparkles size={120} />
             </div>
+            <h3 className="font-black text-xl text-white uppercase tracking-tighter mb-3 flex items-center gap-3 relative z-10">
+              {profile?.isPro ? <><Sparkles size={24} className="fill-white" /> Pro Member</> : 'Lumina Pro'}
+            </h3>
+            <p className="text-white/80 text-xs font-bold uppercase tracking-widest leading-relaxed mb-8 relative z-10">
+              {profile?.isPro 
+                ? 'You are enjoying unlimited borrowing and priority services across all library branches.' 
+                : 'Experience the ultimate library membership with home delivery and priority reservations.'}
+            </p>
+            {!profile?.isPro && (
+              <button 
+                onClick={handleUpgrade}
+                className="w-full py-4 bg-white text-primary-accent rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] hover:scale-[1.02] transition-all active:scale-95 shadow-xl relative z-10"
+              >
+                Access Pro Status
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

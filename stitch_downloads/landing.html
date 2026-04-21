@@ -1,0 +1,263 @@
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">tailwind.config = {darkMode: "class", theme: {extend: {colors: {outline: "#767575", "primary-dim": "#f271b5", "on-error-container": "#ffb2b9", "error-dim": "#d73357", "outline-variant": "#484847", "inverse-on-surface": "#565555", "on-primary-container": "#4a002f", "on-surface": "#ffffff", "on-primary-fixed": "#000000", "tertiary-dim": "#8a4cfc", "secondary-fixed": "#cdcdff", "tertiary-container": "#8342f4", "surface-container": "#1a1919", "secondary-container": "#2f2ebe", "error-container": "#a70138", "primary-container": "#f673b7", surface: "#0e0e0e", "secondary-fixed-dim": "#bdbeff", "primary-fixed": "#f673b7", error: "#ff6e84", "surface-container-high": "#20201f", tertiary: "#af88ff", "surface-container-highest": "#262626", "surface-variant": "#262626", "surface-container-lowest": "#000000", "tertiary-fixed-dim": "#b48fff", "surface-tint": "#ff86c3", "tertiary-fixed": "#c0a0ff", background: "#0e0e0e", "surface-container-low": "#131313", "on-secondary": "#080079", "on-secondary-fixed-variant": "#3a3ac8", "on-primary": "#5f003e", "on-secondary-container": "#ccccff", "surface-dim": "#0e0e0e", "secondary-dim": "#6063ee", "on-secondary-fixed": "#160bae", "on-background": "#ffffff", "on-surface-variant": "#adaaaa", "inverse-surface": "#fcf9f8", "on-tertiary": "#2b0065", "on-tertiary-container": "#ffffff", "surface-bright": "#2c2c2c", "on-tertiary-fixed": "#200051", "inverse-primary": "#a53173", primary: "#ff86c3", "on-primary-fixed-variant": "#5b003b", secondary: "#9093ff", "on-error": "#490013", "on-tertiary-fixed-variant": "#4a00a4", "primary-fixed-dim": "#e666aa"}, borderRadius: {DEFAULT: "0.25rem", lg: "0.5rem", xl: "0.75rem", full: "9999px"}, fontFamily: {headline: ["Inter"], body: ["Inter"], label: ["Inter"], display: "Inter"}}}};</script>
+<style>
+    body { font-family: 'Inter', sans-serif; }
+    .font-headline { font-family: 'Space Grotesk', sans-serif; }
+    .glass-panel {
+      background: rgba(31, 31, 34, 0.6);
+      backdrop-filter: blur(12px);
+      border: 0.5px solid rgba(72, 71, 74, 0.2);
+    }
+    .luminous-shadow {
+      box-shadow: 0 0 40px rgba(163, 166, 255, 0.04);
+    }
+    .text-glow {
+      text-shadow: 0 0 15px rgba(163, 166, 255, 0.3);
+    }
+  </style>
+</head>
+<body class="bg-background text-on-surface selection:bg-primary/30 min-h-screen overflow-x-hidden">
+<!-- HUD Filaments & Mesh Gradients -->
+<div class="fixed inset-0 pointer-events-none z-0">
+<div class="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/10 rounded-full blur-[120px]"></div>
+<div class="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-secondary/10 rounded-full blur-[120px]"></div>
+<div class="absolute inset-0 opacity-[0.03]" style="background-image: radial-gradient(#a3a6ff 1px, transparent 1px); background-size: 40px 40px;"></div>
+</div>
+<!-- TopNavBar Implementation -->
+<nav class="fixed top-0 w-full flex justify-between items-center px-8 h-20 bg-slate-950/60 backdrop-blur-xl border-b border-indigo-500/20 z-50 shadow-[0_0_40px_rgba(163,166,255,0.04)]">
+<div class="flex items-center gap-12">
+<span class="text-2xl font-black tracking-tighter text-indigo-300 font-headline">Luminia</span>
+<div class="hidden md:flex items-center gap-8">
+<a class="text-xs font-bold uppercase tracking-widest text-indigo-300 border-b-2 border-indigo-400 pb-1 font-label" href="#">Catalog</a>
+<a class="text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-indigo-200 transition-all duration-300 font-label" href="#">Collections</a>
+<a class="text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-indigo-200 transition-all duration-300 font-label" href="#">Archives</a>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<button class="hidden lg:flex items-center gap-2 px-6 py-2.5 rounded-full bg-gradient-to-r from-primary to-primary-dim text-on-primary font-bold text-sm hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 shadow-[0_0_20px_rgba(163,166,255,0.2)]">
+        Add Book
+      </button>
+<div class="flex items-center gap-4 text-on-surface-variant">
+<button class="p-2 hover:bg-indigo-500/10 rounded-full transition-all duration-300">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 hover:bg-indigo-500/10 rounded-full transition-all duration-300">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</div>
+</nav>
+<main class="relative z-10 pt-20">
+<!-- Hero Section -->
+<section class="relative min-h-[921px] flex flex-col items-center justify-center px-6 text-center overflow-hidden">
+<div class="max-w-5xl mx-auto space-y-8">
+<div class="inline-flex items-center px-3 py-1 rounded-full bg-surface-container-high border border-outline-variant/20 mb-4">
+<span class="text-[10px] font-bold uppercase tracking-[0.2em] text-primary px-2">System Version 2.0</span>
+</div>
+<h1 class="font-headline text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-[1.1] text-on-surface">
+          The Future of <span class="bg-gradient-to-r from-primary via-secondary to-primary-dim bg-clip-text text-transparent">Knowledge Management</span>
+</h1>
+<p class="max-w-2xl mx-auto text-on-surface-variant text-lg md:text-xl leading-relaxed font-light">
+          Unlock the ethereal archive. A high-performance sanctuary for digital curators, combining AI precision with an elegant editorial interface.
+        </p>
+<div class="flex flex-col sm:flex-row items-center justify-center gap-6 pt-8">
+<button class="group relative px-10 py-4 rounded-full bg-gradient-to-br from-primary to-primary-dim text-on-primary font-bold text-lg hover:scale-[1.05] transition-all duration-300 shadow-[0_0_30px_rgba(163,166,255,0.4)]">
+            Get Started
+            <div class="absolute inset-0 rounded-full blur-xl bg-primary opacity-0 group-hover:opacity-20 transition-opacity"></div>
+</button>
+<button class="px-10 py-4 rounded-full border border-outline-variant/30 text-on-surface font-semibold text-lg hover:bg-surface-container-low transition-all duration-300">
+            View Archives
+          </button>
+</div>
+</div>
+<!-- Hero Decorative HUD -->
+<div class="absolute -bottom-20 left-1/2 -translate-x-1/2 w-full max-w-6xl aspect-[2/1] pointer-events-none opacity-40">
+<img alt="Data Visualization Hero" class="w-full h-full object-cover rounded-[100px] blur-sm mix-blend-screen" data-alt="Abstract glowing network of data points and lines in a cosmic blue and violet space with soft bokeh effects" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBgY9WGhg3UnWHL33OKZFC2zsJi-ntQRgpHP2ynBgWLpHObWVl6wCjdeVWPnAwMTAKAj4xeGXC0mP2a91CN_6ZzAPZu3EzU4WdJ5b80RILM6xippCzAkNWD7oA3colZtEIYJ0HtPS2RodmDXsHVPoBCWNht5SsU9u3XJIKms8ncxq6pcP_mt2o8QfH8HrbV2fUN4qz6Y4hDTr5VysqyfmXFz6vDmiJfNjDsTJgCSXOQ9Ukw-KO4jyC2mz5ydVRpawofkOnMZCz9UB8"/>
+<div class="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent"></div>
+</div>
+</section>
+<!-- Bento Feature Grid -->
+<section class="max-w-7xl mx-auto px-6 py-32 space-y-24">
+<div class="grid grid-cols-1 md:grid-cols-12 gap-8 items-stretch">
+<!-- Large Feature Card: AI Cataloging -->
+<div class="md:col-span-7 glass-panel rounded-3xl p-10 flex flex-col justify-between overflow-hidden relative group">
+<div class="relative z-10">
+<span class="text-xs font-bold uppercase tracking-widest text-primary mb-4 block">Intelligence</span>
+<h3 class="font-headline text-4xl font-bold text-on-surface mb-6">AI Cataloging</h3>
+<p class="text-on-surface-variant max-w-md">Our neural engine automatically indexes and cross-references your entire collection with semantic precision.</p>
+</div>
+<div class="mt-12 relative h-48 rounded-2xl overflow-hidden border border-outline-variant/10">
+<img alt="Neural Interface" class="w-full h-full object-cover opacity-60 scale-110 group-hover:scale-100 transition-transform duration-700" data-alt="Digital circuit lines glowing neon blue on a dark background representing artificial intelligence and data processing" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCp1iDJnIg9yNfdZ4bYRuGcgwR8ncNBAFffq8Mj0kgW6_WZd8ohupslsDf6OLhANKD7qN7jsbhTz8m3eaWRjorwf2VeceMCAdEck8pGb_KdfWlyPS1bgsIKUV4_uZqhFZwukRGkwIu6L7DIHgDD4fiO89G6-2d3HdCK-EdfAR1x9m3lTuGztgM-CRHhkCS1FvGBLB7gll8WN6Wu1QEspCIMCaKYzdQpQN1dib1eVSH260iArHr2mee2uRqQM2VcieUpz4ooM5QUDlc"/>
+</div>
+</div>
+<!-- Small Feature Card: Instant Reservations -->
+<div class="md:col-span-5 glass-panel rounded-3xl p-10 flex flex-col justify-between hover:translate-y-[-4px] transition-all duration-300">
+<div>
+<div class="w-12 h-12 rounded-xl bg-secondary/20 flex items-center justify-center text-secondary mb-8">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">bolt</span>
+</div>
+<h3 class="font-headline text-3xl font-bold text-on-surface mb-4">Instant Reservations</h3>
+<p class="text-on-surface-variant">Real-time availability tracking across the entire global library network.</p>
+</div>
+<div class="pt-8 flex items-center justify-between">
+<div class="flex -space-x-3">
+<div class="w-8 h-8 rounded-full border-2 border-surface bg-surface-container-highest"></div>
+<div class="w-8 h-8 rounded-full border-2 border-surface bg-surface-container-high"></div>
+<div class="w-8 h-8 rounded-full border-2 border-surface bg-surface-container"></div>
+</div>
+<span class="text-sm font-medium text-primary">Active Now</span>
+</div>
+</div>
+<!-- Small Feature Card: Smart Tracking -->
+<div class="md:col-span-5 glass-panel rounded-3xl p-10 flex flex-col justify-between hover:translate-y-[-4px] transition-all duration-300">
+<div>
+<div class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary mb-8">
+<span class="material-symbols-outlined">analytics</span>
+</div>
+<h3 class="font-headline text-3xl font-bold text-on-surface mb-4">Smart Tracking</h3>
+<p class="text-on-surface-variant">Monitor your reading velocity and knowledge retention with advanced behavioral analytics.</p>
+</div>
+<div class="mt-8 h-12 flex items-end gap-1">
+<div class="w-full bg-primary/20 rounded-t h-[40%]"></div>
+<div class="w-full bg-primary/20 rounded-t h-[60%]"></div>
+<div class="w-full bg-primary/40 rounded-t h-[80%]"></div>
+<div class="w-full bg-primary/60 rounded-t h-[50%]"></div>
+<div class="w-full bg-primary rounded-t h-[95%]"></div>
+</div>
+</div>
+<!-- Medium Feature Card: The Ethereal Archive -->
+<div class="md:col-span-7 glass-panel rounded-3xl p-10 flex flex-col justify-center items-center text-center relative overflow-hidden">
+<div class="absolute inset-0 bg-gradient-to-br from-secondary/10 to-transparent"></div>
+<div class="relative z-10 space-y-6">
+<h3 class="font-headline text-4xl font-bold text-on-surface">The Ethereal Archive</h3>
+<p class="text-on-surface-variant max-w-sm mx-auto">A digital sanctuary where data transcends physical limits, floating in a vast cosmic space.</p>
+<button class="text-secondary font-bold text-sm uppercase tracking-widest hover:underline decoration-2 underline-offset-8">Discover Philosophy</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Side-by-Side Narrative Section -->
+<section class="max-w-7xl mx-auto px-6 py-32 grid grid-cols-1 lg:grid-cols-2 gap-24 items-center">
+<div class="relative order-2 lg:order-1">
+<div class="absolute -inset-4 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 blur-[100px] opacity-30"></div>
+<div class="relative rounded-[40px] overflow-hidden border border-outline-variant/10 shadow-2xl">
+<img alt="Library Interior" class="w-full h-[600px] object-cover" data-alt="Futuristic library interior with tall shelves of glowing books and neon atmospheric lighting in a dark minimal space" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDmVch8rG3GQLH4JfMlbwOVwhdz2SZ24oYj3dudILLKVwF_294IdvbHTs---j7ZmASTk1XQsQ01XkoRvOHSFUT2ExuXyICVgjID7oql60vp9WdNtRPuKcsz5LHsiKoy9-ETCwKi9dHC7B0584NTnGzPGcjjI41bDq2rRa4Hx0xq7iBvpm0kMWeT2i8B6GXsn-i-kwQsUGlkdw3VY_JutnlJ61MPK12nkELdnSSMaJ11In_9VkGyiLi5h80bzxqCALtbHvT1njGUh8M"/>
+<div class="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent"></div>
+<div class="absolute bottom-10 left-10 glass-panel p-6 rounded-2xl max-w-xs">
+<p class="text-sm font-medium italic text-on-surface">"The library is no longer a building, but a state of mind."</p>
+<p class="text-xs text-on-surface-variant mt-2">— Founder, Luminia</p>
+</div>
+</div>
+</div>
+<div class="space-y-12 order-1 lg:order-2">
+<div class="space-y-4">
+<span class="text-primary font-bold uppercase tracking-[0.3em] text-xs">Modern Curation</span>
+<h2 class="font-headline text-5xl font-bold leading-tight">Designed for the <span class="text-primary-dim">Modern Intellectual</span></h2>
+</div>
+<div class="space-y-8">
+<div class="flex gap-6">
+<div class="flex-shrink-0 w-10 h-10 rounded-full bg-surface-container-high border border-outline-variant/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-xl">draw</span>
+</div>
+<div>
+<h4 class="font-headline text-xl font-bold mb-2">Editorial Layouts</h4>
+<p class="text-on-surface-variant">Focus-first design that prioritizes readability and aesthetic pleasure over dense data tables.</p>
+</div>
+</div>
+<div class="flex gap-6">
+<div class="flex-shrink-0 w-10 h-10 rounded-full bg-surface-container-high border border-outline-variant/20 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-xl">cloud_sync</span>
+</div>
+<div>
+<h4 class="font-headline text-xl font-bold mb-2">Omni-Channel Sync</h4>
+<p class="text-on-surface-variant">Your archive travels with you, perfectly formatted for desktop, tablet, and neural-link devices.</p>
+</div>
+</div>
+<div class="flex gap-6">
+<div class="flex-shrink-0 w-10 h-10 rounded-full bg-surface-container-high border border-outline-variant/20 flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined text-xl">verified_user</span>
+</div>
+<div>
+<h4 class="font-headline text-xl font-bold mb-2">Immutable Privacy</h4>
+<p class="text-on-surface-variant">Quantum-encrypted storage ensuring your research and reading habits remain your own.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Final CTA Area -->
+<section class="max-w-7xl mx-auto px-6 py-40">
+<div class="glass-panel rounded-[60px] p-16 md:p-24 text-center relative overflow-hidden">
+<div class="absolute inset-0 bg-gradient-to-r from-primary/5 via-secondary/5 to-primary/5 pointer-events-none"></div>
+<div class="relative z-10 space-y-10">
+<h2 class="font-headline text-4xl md:text-6xl font-bold max-w-3xl mx-auto">Ready to ascend to the archive?</h2>
+<p class="text-on-surface-variant text-lg max-w-xl mx-auto">Join 10,000+ researchers and curators who have found their sanctuary.</p>
+<div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
+<button class="px-12 py-5 rounded-full bg-on-surface text-background font-bold text-lg hover:bg-primary transition-colors">Start Free Trial</button>
+<button class="px-12 py-5 rounded-full border border-outline-variant text-on-surface font-bold text-lg hover:bg-surface-container-highest transition-colors">Request Demo</button>
+</div>
+</div>
+</div>
+</section>
+</main>
+<footer class="bg-surface-container-lowest py-20 px-8 relative overflow-hidden">
+<div class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-12 relative z-10">
+<div class="col-span-2 space-y-6">
+<span class="text-2xl font-black tracking-tighter text-indigo-300 font-headline">Luminia</span>
+<p class="text-on-surface-variant text-sm max-w-xs leading-relaxed">
+          The world's first editorial library management system. Built for the future of human curiosity.
+        </p>
+<div class="flex gap-4">
+<div class="w-8 h-8 rounded-full bg-surface-container-high border border-outline-variant/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-sm">public</span>
+</div>
+<div class="w-8 h-8 rounded-full bg-surface-container-high border border-outline-variant/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-sm">alternate_email</span>
+</div>
+</div>
+</div>
+<div class="space-y-4">
+<h5 class="text-xs font-bold uppercase tracking-widest text-on-surface">Platform</h5>
+<ul class="space-y-3 text-sm text-on-surface-variant">
+<li><a class="hover:text-primary" href="#">Catalog</a></li>
+<li><a class="hover:text-primary" href="#">Smart Search</a></li>
+<li><a class="hover:text-primary" href="#">AI Insights</a></li>
+<li><a class="hover:text-primary" href="#">API Access</a></li>
+</ul>
+</div>
+<div class="space-y-4">
+<h5 class="text-xs font-bold uppercase tracking-widest text-on-surface">Company</h5>
+<ul class="space-y-3 text-sm text-on-surface-variant">
+<li><a class="hover:text-primary" href="#">About</a></li>
+<li><a class="hover:text-primary" href="#">Philosophy</a></li>
+<li><a class="hover:text-primary" href="#">Security</a></li>
+<li><a class="hover:text-primary" href="#">Contact</a></li>
+</ul>
+</div>
+<div class="col-span-2 space-y-6">
+<h5 class="text-xs font-bold uppercase tracking-widest text-on-surface">Weekly Pulse</h5>
+<p class="text-sm text-on-surface-variant">Our curated newsletter for the modern intellectual.</p>
+<div class="flex">
+<input class="bg-surface-container-high border-none rounded-l-full px-6 py-3 text-sm w-full focus:ring-1 focus:ring-primary" placeholder="Email address" type="email"/>
+<button class="bg-primary text-on-primary px-6 py-3 rounded-r-full font-bold text-sm">Join</button>
+</div>
+</div>
+</div>
+<div class="max-w-7xl mx-auto mt-20 pt-10 border-t border-outline-variant/10 flex flex-col md:flex-row justify-between gap-6 text-[10px] uppercase tracking-[0.2em] font-bold text-on-surface-variant">
+<span>© 2024 Luminia Systems Corp.</span>
+<div class="flex gap-8">
+<a class="hover:text-primary" href="#">Privacy Policy</a>
+<a class="hover:text-primary" href="#">Terms of Service</a>
+<a class="hover:text-primary" href="#">Cookie Policy</a>
+</div>
+</div>
+</footer>
+</body></html>
