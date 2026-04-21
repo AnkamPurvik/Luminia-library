@@ -55,6 +55,7 @@ npm run dev
 
 | Version | Date | Milestone | Key Features Added |
 | :--- | :--- | :--- | :--- |
+| **v2.0** | **Apr 21, 2026** | **SaaS 2.0 & Mobile Overhaul** | **Bottom Navigation Bar**, **Mobile Bento Grid Stacking**, **Glassmorphic Support Chat**, Admin **Modify Deadline Tool**, User **Update Notifications**, **Seen/Read Status indicators**, **Haptic Feedback Integration**, **Quick Replies**, and Firestore Security Rules for Chat. |
 | **v1.7** | **Apr 11, 2026** | **Universal Nexus Update** | **Global Sidebar Architecture**, Universal Navigation, High-Fidelity Header, **Real-time Digital Clock Sync**, Centralized Search, Dark Mode Form Refinement. |
 | **v1.6** | Apr 11, 2026 | Indigo/Cyan Modernization | Full Functional Activity Timeline, Professional Indigo/Cyan Design System, Glassmorphism 3.0, Premium Admin Console, Real-time Sync Indicators. |
 | **v1.5** | Apr 11, 2026 | 360° Forge Overhaul | Universal Dark Mode 2.0, Glassmorphism Panels, Initial Design Refinement. |
