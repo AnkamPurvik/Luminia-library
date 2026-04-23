@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { collection, query, where, onSnapshot, doc, updateDoc, getDoc, setDoc, addDoc, deleteDoc, getDocs, limit, orderBy } from 'firebase/firestore';
-import { updateProfile } from 'firebase/auth';
+import { onAuthStateChanged, User as FirebaseUser, updateProfile } from 'firebase/auth';
 import { db, auth, storage, handleFirestoreError, OperationType, logActivity } from '../lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { compressImage } from '../lib/image-utils';
@@ -15,19 +15,18 @@ import {
 
 import { Modal } from '../components/ui/Modal';
 
-export default function UserDashboard() {
+export default function UserDashboard({ user, profile }: { user: FirebaseUser, profile: UserProfile | null }) {
   const navigate = useNavigate();
   const [borrowedBooks, setBorrowedBooks] = useState<(Transaction & { bookTitle?: string; bookCover?: string })[]>([]);
   const [reservations, setReservations] = useState<(Reservation & { bookTitle?: string; bookCover?: string })[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [totalFines, setTotalFines] = useState(0);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRenewing, setIsRenewing] = useState<string | null>(null);
   const [isReturning, setIsReturning] = useState<string | null>(null);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [editName, setEditName] = useState('');
-  const [editPhotoURL, setEditPhotoURL] = useState('');
+  const [editName, setEditName] = useState(profile?.name || '');
+  const [editPhotoURL, setEditPhotoURL] = useState(profile?.photoURL || '');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewURL, setPreviewURL] = useState<string | null>(null);
@@ -47,21 +46,17 @@ export default function UserDashboard() {
   });
 
   useEffect(() => {
-    const user = auth.currentUser;
+    if (profile) {
+      setEditName(profile.name);
+      setEditPhotoURL(profile.photoURL || '');
+    }
+  }, [profile]);
+
+  useEffect(() => {
     if (!user) {
       setIsLoading(false);
       return;
     }
-
-    // Fetch Profile
-    const profileUnsub = onSnapshot(doc(db, 'users', user.uid), (snap) => {
-      if (snap.exists()) {
-        const data = snap.data() as UserProfile;
-        setProfile(data);
-        setEditName(data.name);
-        setEditPhotoURL(data.photoURL || '');
-      }
-    });
 
     // Fetch borrowed transactions
     const q = query(
@@ -122,13 +117,12 @@ export default function UserDashboard() {
     });
 
     return () => {
-      profileUnsub();
       transUnsub();
       allTransUnsub();
       resUnsub();
       notifUnsub();
     };
-  }, []);
+  }, [user]);
 
   const calculateFine = (dueDate: string) => {
     const due = new Date(dueDate);
@@ -646,7 +640,7 @@ export default function UserDashboard() {
                           <div className="flex items-center gap-6">
                             <div className="h-20 w-16 bg-white/5 rounded-2xl overflow-hidden flex-shrink-0 border border-white/10 shadow-2xl relative group">
                               {item.bookCover ? (
-                                <img src={item.bookCover} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" referrerPolicy="no-referrer" />
+                                <img src={item.bookCover} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" referrerPolicy="no-referrer" loading="lazy" />
                               ) : (
                                 <div className="h-full w-full flex items-center justify-center text-slate-700">
                                   <BookOpen size={24} />
@@ -730,7 +724,7 @@ export default function UserDashboard() {
                     <div className="flex items-center gap-4">
                       <div className="h-14 w-10 bg-white/5 rounded-lg overflow-hidden flex-shrink-0 border border-white/10">
                         {res.bookCover ? (
-                          <img src={res.bookCover} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                          <img src={res.bookCover} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" loading="lazy" />
                         ) : (
                           <div className="h-full w-full flex items-center justify-center text-slate-500">
                             <Bookmark size={14} />

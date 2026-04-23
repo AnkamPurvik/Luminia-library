@@ -10,7 +10,9 @@ import {
   Calendar, Info, History, Loader2, AlertCircle, ShoppingBag, Bookmark
 } from 'lucide-react';
 
-export default function BookDetail() {
+import { User as FirebaseUser } from 'firebase/auth';
+
+export default function BookDetail({ user, profile }: { user: FirebaseUser | null, profile: any }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [book, setBook] = useState<Book | null>(null);
@@ -199,6 +201,7 @@ export default function BookDetail() {
                 alt={book.title} 
                 className="w-full aspect-[3/4] object-cover"
                 referrerPolicy="no-referrer"
+                loading="lazy"
               />
             ) : (
               <div className="w-full aspect-[3/4] bg-slate-100 flex items-center justify-center text-slate-300">

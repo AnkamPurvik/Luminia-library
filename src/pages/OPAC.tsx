@@ -53,14 +53,12 @@ const SAMPLE_BOOKS = [
   }
 ];
 
-export default function OPAC({ searchQuery: globalSearch, onSearchChange: setGlobalSearch }: { searchQuery: string, onSearchChange: (val: string) => void }) {
+export default function OPAC({ searchQuery: globalSearch, onSearchChange: setGlobalSearch, user }: { searchQuery: string, onSearchChange: (val: string) => void, user: FirebaseUser | null }) {
   const [books, setBooks] = useState<Book[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const [isSeeding, setIsSeeding] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [user, setUser] = useState<FirebaseUser | null>(null);
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [modalConfig, setModalConfig] = useState<{
     isOpen: boolean;
     title: string;
@@ -75,17 +73,9 @@ export default function OPAC({ searchQuery: globalSearch, onSearchChange: setGlo
     type: 'default'
   });
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setIsAuthLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
+  // Redundant auth listener removed — managed in App.tsx
 
   useEffect(() => {
-    if (isAuthLoading) return;
-    
     // Catalog is only visible to authenticated users per rules
     if (!user) {
       setIsLoading(false);
@@ -101,20 +91,17 @@ export default function OPAC({ searchQuery: globalSearch, onSearchChange: setGlo
         })) as Book[];
         setBooks(booksData);
         setIsLoading(false);
+        setError(null); // Clear error on success
       },
       (err) => {
         console.error('Error fetching books:', err);
-        try {
-          handleFirestoreError(err, OperationType.GET, 'books');
-        } catch (e: any) {
-          setError(e.message);
-        }
+        setError('Failed to load library catalog. Please check your connection.');
         setIsLoading(false);
       }
     );
 
     return () => unsubscribe();
-  }, [user, isAuthLoading]);
+  }, [user]);
 
   const handleLogin = async () => {
     try {
@@ -305,7 +292,7 @@ export default function OPAC({ searchQuery: globalSearch, onSearchChange: setGlo
     <div className="min-h-screen bg-bg-dark selection:bg-primary-accent/30">
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {!user && !isAuthLoading ? (
+        {!user ? (
           <div className="py-20 space-y-32">
             {/* Hero Section */}
             <div className="flex flex-col items-center text-center px-4 relative overflow-hidden">
@@ -407,7 +394,7 @@ export default function OPAC({ searchQuery: globalSearch, onSearchChange: setGlo
               </div>
             </div>
           </div>
-        ) : isLoading || isAuthLoading ? (
+        ) : isLoading ? (
           <div className="flex flex-col items-center justify-center py-40">
             <div className="relative">
               <div className="absolute inset-0 bg-primary-accent/20 blur-2xl animate-pulse rounded-full"></div>

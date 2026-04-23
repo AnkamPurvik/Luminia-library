@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { collection, onSnapshot, query, addDoc, updateDoc, doc, deleteDoc, where, getDoc } from 'firebase/firestore';
 import { db, auth, handleFirestoreError, OperationType, logActivity } from '../lib/firebase';
-import { Book } from '../types';
+import { Book, UserProfile } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Plus, Search, Edit2, Trash2, Loader2, 
@@ -15,7 +15,9 @@ import { Modal } from '../components/ui/Modal';
 import { AdminSupportInbox } from '../components/ui/AdminSupportInbox';
 import toast from 'react-hot-toast';
 
-export default function AdminDashboard() {
+import { User as FirebaseUser } from 'firebase/auth';
+
+export default function AdminDashboard({ user, profile }: { user: FirebaseUser | null, profile: UserProfile | null }) {
   const navigate = useNavigate();
   const [books, setBooks] = useState<Book[]>([]);
   const [membersCount, setMembersCount] = useState(0);

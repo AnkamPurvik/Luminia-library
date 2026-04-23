@@ -21,12 +21,13 @@ export function BookCard({ book, onReserve }: BookCardProps) {
       <Link to={`/book/${book.id}`} className="block flex-grow">
         <div className="aspect-[3/4] relative overflow-hidden bg-white/5">
           {book.coverUrl ? (
-            <img
-              src={book.coverUrl}
-              alt={book.title}
-              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-              referrerPolicy="no-referrer"
-            />
+              <img
+                src={book.coverUrl}
+                alt={book.title}
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                referrerPolicy="no-referrer"
+                loading="lazy"
+              />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-white/20">
               <BookOpen size={48} />

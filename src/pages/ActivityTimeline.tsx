@@ -12,11 +12,12 @@ import { auth, db } from '../lib/firebase';
 import { ActivityLog } from '../types';
 import toast from 'react-hot-toast';
 
-export default function ActivityTimeline({ searchQuery = '' }: { searchQuery?: string }) {
+import { User as FirebaseUser } from 'firebase/auth';
+
+export default function ActivityTimeline({ user, profile, searchQuery = '' }: { user: FirebaseUser | null, profile: any, searchQuery?: string }) {
   const navigate = useNavigate();
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const user = auth.currentUser;
 
   useEffect(() => {
     const q = query(

@@ -15,16 +15,19 @@ import { Header } from './components/layout/Header';
 import { MobileNav } from './components/layout/MobileNav';
 import { ChatWidget } from './components/ui/ChatWidget';
 import { ThemeProvider } from './context/ThemeContext';
-import OPAC from './pages/OPAC';
-import UserDashboard from './pages/UserDashboard';
-import AdminDashboard from './pages/AdminDashboard';
-import AdminBookDetail from './pages/AdminBookDetail';
-import BookDetail from './pages/BookDetail';
-import LuminaPro from './pages/LuminaPro';
-import Login from './pages/Login';
-import ActivityTimeline from './pages/ActivityTimeline';
-import Settings from './pages/Settings';
 import { Loader2 } from 'lucide-react';
+import { lazy, Suspense } from 'react';
+
+// Lazy load pages for performance
+const OPAC = lazy(() => import('./pages/OPAC'));
+const UserDashboard = lazy(() => import('./pages/UserDashboard'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const AdminBookDetail = lazy(() => import('./pages/AdminBookDetail'));
+const BookDetail = lazy(() => import('./pages/BookDetail'));
+const LuminaPro = lazy(() => import('./pages/LuminaPro'));
+const Login = lazy(() => import('./pages/Login'));
+const ActivityTimeline = lazy(() => import('./pages/ActivityTimeline'));
+const Settings = lazy(() => import('./pages/Settings'));
 
 export default function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -108,30 +111,39 @@ export default function App() {
             
             {/* Extra bottom padding on mobile for bottom nav */}
             <main className="flex-1 overflow-y-auto custom-scrollbar relative pb-20 md:pb-0">
-              <Routes>
-                <Route path="/" element={<OPAC searchQuery={searchQuery} onSearchChange={setSearchQuery} />} />
-                <Route path="/book/:id" element={<BookDetail />} />
-                <Route path="/login" element={<Login />} />
-                <Route 
-                  path="/dashboard" 
-                  element={user ? <UserDashboard /> : <Navigate to="/" />} 
-                />
-                <Route 
-                  path="/admin" 
-                  element={isAdmin ? <AdminDashboard /> : <Navigate to="/" />} 
-                />
-                <Route 
-                  path="/admin/book/:id" 
-                  element={isAdmin ? <AdminBookDetail /> : <Navigate to="/" />} 
-                />
-                <Route 
-                  path="/admin/timeline" 
-                  element={isAdmin ? <ActivityTimeline searchQuery={searchQuery} /> : <Navigate to="/" />} 
-                />
-                <Route path="/pro" element={<LuminaPro />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="*" element={<Navigate to="/" />} />
-              </Routes>
+              <Suspense fallback={
+                <div className="flex flex-col items-center justify-center py-40">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-primary-accent/20 blur-2xl animate-pulse rounded-full"></div>
+                    <Loader2 className="h-10 w-10 text-primary-accent animate-spin relative z-10" />
+                  </div>
+                </div>
+              }>
+                <Routes>
+                  <Route path="/" element={<OPAC searchQuery={searchQuery} onSearchChange={setSearchQuery} user={user} />} />
+                  <Route path="/book/:id" element={<BookDetail user={user} profile={profile} />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route 
+                    path="/dashboard" 
+                    element={user ? <UserDashboard user={user} profile={profile} /> : <Navigate to="/" />} 
+                  />
+                  <Route 
+                    path="/admin" 
+                    element={isAdmin ? <AdminDashboard user={user} profile={profile} /> : <Navigate to="/" />} 
+                  />
+                  <Route 
+                    path="/admin/book/:id" 
+                    element={isAdmin ? <AdminBookDetail user={user} profile={profile} /> : <Navigate to="/" />} 
+                  />
+                  <Route 
+                    path="/admin/timeline" 
+                    element={isAdmin ? <ActivityTimeline user={user} profile={profile} searchQuery={searchQuery} /> : <Navigate to="/" />} 
+                  />
+                  <Route path="/pro" element={<LuminaPro user={user} profile={profile} />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="*" element={<Navigate to="/" />} />
+                </Routes>
+              </Suspense>
             </main>
           </div>
         </div>

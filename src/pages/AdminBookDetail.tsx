@@ -22,7 +22,9 @@ interface TransactionLog {
   status: 'borrowed' | 'returned' | 'overdue';
 }
 
-export default function AdminBookDetail() {
+import { User as FirebaseUser } from 'firebase/auth';
+
+export default function AdminBookDetail({ user, profile }: { user: FirebaseUser | null, profile: any }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [book, setBook] = useState<Book | null>(null);
@@ -48,6 +50,9 @@ export default function AdminBookDetail() {
       where('bookId', '==', id)
     );
     
+    // User cache to avoid N+1 queries
+    const userCache: Record<string, string> = {};
+
     const unsubscribe = onSnapshot(q, async (snapshot) => {
       const transData = await Promise.all(snapshot.docs.map(async (docSnap) => {
         const data = docSnap.data();
@@ -55,14 +60,19 @@ export default function AdminBookDetail() {
         
         // If name is missing or generic, try to fetch from user profile
         if (!name || name === 'Member' || name === 'Anonymous Member' || name === 'member') {
-          try {
-            const userSnap = await getDoc(doc(db, 'users', data.userId));
-            if (userSnap.exists()) {
-              const userData = userSnap.data();
-              name = userData.name || userData.displayName || userData.username || userData.email || 'Member';
+          if (userCache[data.userId]) {
+            name = userCache[data.userId];
+          } else {
+            try {
+              const userSnap = await getDoc(doc(db, 'users', data.userId));
+              if (userSnap.exists()) {
+                const userData = userSnap.data();
+                name = userData.name || userData.displayName || userData.username || userData.email || 'Member';
+                userCache[data.userId] = name; // Cache it
+              }
+            } catch (e) {
+              console.error("Error fetching user name:", e);
             }
-          } catch (e) {
-            console.error("Error fetching user name:", e);
           }
         }
 
@@ -163,6 +173,7 @@ export default function AdminBookDetail() {
                 src={book.coverUrl || 'https://via.placeholder.com/400x600'} 
                 alt={book.title} 
                 className="w-full h-full object-cover"
+                loading="lazy"
               />
             </div>
           </div>

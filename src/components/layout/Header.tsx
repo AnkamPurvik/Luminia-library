@@ -11,7 +11,21 @@ interface HeaderProps {
 
 export function Header({ profile, searchQuery, onSearchChange }: HeaderProps) {
   const [time, setTime] = useState(new Date());
+  const [localSearch, setLocalSearch] = useState(searchQuery);
   const navigate = useNavigate();
+
+  // Debounce search update
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onSearchChange(localSearch);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [localSearch, onSearchChange]);
+
+  // Sync local search with global search (e.g. when cleared from outside)
+  useEffect(() => {
+    setLocalSearch(searchQuery);
+  }, [searchQuery]);
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
@@ -27,8 +41,8 @@ export function Header({ profile, searchQuery, onSearchChange }: HeaderProps) {
             type="text" 
             placeholder="Search catalog..."
             className="w-full pl-10 md:pl-14 pr-4 md:pr-6 py-2 md:py-4 bg-white/5 border border-white/10 rounded-xl md:rounded-2xl text-[9px] md:text-[11px] font-black uppercase tracking-widest text-white focus:outline-none focus:ring-4 focus:ring-primary-accent/10 focus:border-primary-accent/40 transition-all shadow-inner"
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
+            value={localSearch}
+            onChange={(e) => setLocalSearch(e.target.value)}
           />
         </div>
       </div>

@@ -10,7 +10,9 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-export default function LuminaPro() {
+import { User as FirebaseUser } from 'firebase/auth';
+
+export default function LuminaPro({ user, profile }: { user: FirebaseUser | null, profile: any }) {
   const navigate = useNavigate();
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
