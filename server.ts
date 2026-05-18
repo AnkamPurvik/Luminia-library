@@ -14,9 +14,42 @@ const __dirname = path.dirname(__filename);
 
 // Initialize Firebase Admin for the server
 if (!admin.apps.length) {
-  admin.initializeApp({
-    projectId: firebaseConfig.projectId,
-  });
+  const serviceAccountVar = process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (serviceAccountVar) {
+    try {
+      const serviceAccount = JSON.parse(serviceAccountVar);
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        projectId: firebaseConfig.projectId,
+      });
+      console.log("[FIREBASE ADMIN] Initialized successfully using FIREBASE_SERVICE_ACCOUNT environment variable.");
+    } catch (err) {
+      console.error("[FIREBASE ADMIN] Failed to parse FIREBASE_SERVICE_ACCOUNT env var:", err);
+      admin.initializeApp({
+        projectId: firebaseConfig.projectId,
+      });
+    }
+  } else if (fs.existsSync(path.join(process.cwd(), "firebase-service-account.json"))) {
+    try {
+      admin.initializeApp({
+        credential: admin.credential.cert(path.join(process.cwd(), "firebase-service-account.json")),
+        projectId: firebaseConfig.projectId,
+      });
+      console.log("[FIREBASE ADMIN] Initialized successfully using local firebase-service-account.json file.");
+    } catch (err) {
+      console.error("[FIREBASE ADMIN] Failed to load local firebase-service-account.json file:", err);
+      admin.initializeApp({
+        projectId: firebaseConfig.projectId,
+      });
+    }
+  } else {
+    console.warn(
+      "[FIREBASE ADMIN] No service account credentials found. Falling back to default application credentials. Database operations may fail if unauthenticated."
+    );
+    admin.initializeApp({
+      projectId: firebaseConfig.projectId,
+    });
+  }
 }
 
 const db = getFirestore(firebaseConfig.firestoreDatabaseId);
