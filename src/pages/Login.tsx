@@ -5,11 +5,12 @@ import {
   createUserWithEmailAndPassword,
   signInWithPopup, 
   GoogleAuthProvider,
-  updateProfile
+  updateProfile,
+  signInWithCustomToken
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { motion, AnimatePresence } from 'motion/react';
-import { Mail, Lock, User, ArrowRight, Loader2, Library, CheckCircle2 } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, Loader2, Library, CheckCircle2, Key } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import heroImage from '../assets/login-hero.png';
@@ -21,6 +22,67 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // OTP State hooks
+  const [authMethod, setAuthMethod] = useState<'password' | 'otp'>('password');
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+
+  // Handle requesting 6-digit verification code
+  const handleRequestOTP = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) {
+      toast.error('Please enter your email address first.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch('/api/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to dispatch verification code.');
+
+      setOtpSent(true);
+      toast.success(data.message || 'Verification passcode dispatched! Check your email or check local otp-logs.txt.');
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Could not send verification code.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle verifying code and signing in
+  const handleVerifyOTP = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otpCode || otpCode.length !== 6) {
+      toast.error('Please enter the 6-digit numeric verification code.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch('/api/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otpCode })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Verification failed');
+
+      const { token } = data;
+      await signInWithCustomToken(auth, token);
+      toast.success('Successfully authenticated!');
+      navigate('/dashboard');
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Invalid passcode or expired.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // If already logged in, redirect to dashboard
   useEffect(() => {
@@ -113,85 +175,220 @@ export default function Login() {
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {!isLogin && (
+          {isLogin && (
+            <div className="flex gap-3 mb-8">
+              <button 
+                type="button"
+                onClick={() => { setAuthMethod('password'); setOtpSent(false); }}
+                className={`flex-1 py-2.5 text-[9px] font-black uppercase tracking-wider rounded-xl transition-all border ${
+                  authMethod === 'password' 
+                    ? 'bg-primary-accent/15 border-primary-accent text-white shadow-xl shadow-primary-accent/10' 
+                    : 'bg-transparent border-white/5 text-slate-500 hover:text-slate-300'
+                }`}
+              >
+                Password Login
+              </button>
+              <button 
+                type="button"
+                onClick={() => setAuthMethod('otp')}
+                className={`flex-1 py-2.5 text-[9px] font-black uppercase tracking-wider rounded-xl transition-all border flex items-center justify-center gap-1.5 ${
+                  authMethod === 'otp' 
+                    ? 'bg-secondary-accent/15 border-secondary-accent text-white shadow-xl shadow-secondary-accent/10' 
+                    : 'bg-transparent border-white/5 text-slate-500 hover:text-slate-300'
+                }`}
+              >
+                <Key size={11} className="text-secondary-accent" />
+                Secure OTP Login
+              </button>
+            </div>
+          )}
+
+          {isLogin && authMethod === 'otp' ? (
+            <div className="space-y-6">
+              {!otpSent ? (
+                <form onSubmit={handleRequestOTP} className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em] px-1">Email Address</label>
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-500 group-focus-within:text-primary-accent transition-colors">
+                        <Mail size={18} />
+                      </div>
+                      <input
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="NAME@RESOURCES.COM"
+                        className="block w-full pl-14 pr-12 py-4 bg-white/5 border border-white/5 rounded-2xl focus:bg-white/10 focus:ring-4 focus:ring-primary-accent/10 focus:border-primary-accent/40 outline-none transition-all placeholder:text-slate-700 text-white font-black text-xs uppercase tracking-widest"
+                      />
+                      {email && email.includes('@') && (
+                        <div className="absolute inset-y-0 right-0 pr-5 flex items-center">
+                          <CheckCircle2 size={18} className="text-secondary-accent" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-primary-accent hover:bg-primary-accent/90 text-white py-5 rounded-2xl font-black uppercase tracking-[0.3em] text-[10px] transition-all shadow-xl shadow-primary-accent/20 flex items-center justify-center gap-3 group active:scale-[0.98] disabled:opacity-50"
+                  >
+                    {loading ? (
+                      <Loader2 className="animate-spin" size={18} />
+                    ) : (
+                      <>
+                        Send Verification Code
+                        <ArrowRight size={16} className="group-hover:translate-x-2 transition-transform" />
+                      </>
+                    )}
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleVerifyOTP} className="space-y-6">
+                  <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 text-center">
+                    <p className="text-[10px] text-emerald-400 font-black uppercase tracking-widest">
+                      Verification passcode successfully sent to:
+                    </p>
+                    <p className="text-xs text-white font-bold tracking-tight mt-1">
+                      {email}
+                    </p>
+                    <button 
+                      type="button" 
+                      onClick={() => setOtpSent(false)} 
+                      className="text-[9px] text-primary-accent hover:underline font-black uppercase tracking-widest mt-2 block mx-auto"
+                    >
+                      Change Email Address
+                    </button>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em] px-1">Enter 6-Digit Passcode</label>
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-500 group-focus-within:text-secondary-accent transition-colors">
+                        <Key size={18} />
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        maxLength={6}
+                        value={otpCode}
+                        onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                        placeholder="000000"
+                        className="block w-full pl-14 pr-6 py-4 bg-white/5 border border-white/5 rounded-2xl focus:bg-white/10 focus:ring-4 focus:ring-secondary-accent/10 focus:border-secondary-accent/40 outline-none transition-all placeholder:text-slate-700 text-white font-black text-center text-xl tracking-[0.4em]"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-secondary-accent hover:bg-secondary-accent/90 text-white py-5 rounded-2xl font-black uppercase tracking-[0.3em] text-[10px] transition-all shadow-xl shadow-secondary-accent/20 flex items-center justify-center gap-3 group active:scale-[0.98] disabled:opacity-50"
+                  >
+                    {loading ? (
+                      <Loader2 className="animate-spin" size={18} />
+                    ) : (
+                      <>
+                        Verify & Access Catalog
+                        <CheckCircle2 size={16} className="group-hover:scale-110 transition-transform" />
+                      </>
+                    )}
+                  </button>
+
+                  <div className="text-center">
+                    <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Didn't receive the passcode? </span>
+                    <button 
+                      type="button" 
+                      onClick={handleRequestOTP} 
+                      className="text-[9px] text-slate-400 hover:text-white hover:underline font-black uppercase tracking-widest"
+                    >
+                      Resend Code
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {!isLogin && (
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em] px-1">Full Name</label>
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-500 group-focus-within:text-primary-accent transition-colors">
+                      <User size={18} />
+                    </div>
+                    <input
+                      type="text"
+                      required
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="ENTER FULL NAME"
+                      className="block w-full pl-14 pr-6 py-4 bg-white/5 border border-white/5 rounded-2xl focus:bg-white/10 focus:ring-4 focus:ring-primary-accent/10 focus:border-primary-accent/40 outline-none transition-all placeholder:text-slate-700 text-white font-black text-xs uppercase tracking-widest"
+                    />
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em] px-1">Full Name</label>
+                <label className="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em] px-1">Email Address</label>
                 <div className="relative group">
                   <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-500 group-focus-within:text-primary-accent transition-colors">
-                    <User size={18} />
+                    <Mail size={18} />
                   </div>
                   <input
-                    type="text"
+                    type="email"
                     required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="ENTER FULL NAME"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="NAME@RESOURCES.COM"
+                    className="block w-full pl-14 pr-12 py-4 bg-white/5 border border-white/5 rounded-2xl focus:bg-white/10 focus:ring-4 focus:ring-primary-accent/10 focus:border-primary-accent/40 outline-none transition-all placeholder:text-slate-700 text-white font-black text-xs uppercase tracking-widest"
+                  />
+                  {email && email.includes('@') && (
+                    <div className="absolute inset-y-0 right-0 pr-5 flex items-center">
+                      <CheckCircle2 size={18} className="text-secondary-accent" />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between px-1">
+                  <label className="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em]">Password</label>
+                  {isLogin && (
+                    <button type="button" className="text-[10px] font-black uppercase tracking-widest text-primary-accent hover:text-primary-accent/80 transition-colors">Forgot Password</button>
+                  )}
+                </div>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-500 group-focus-within:text-primary-accent transition-colors">
+                    <Lock size={18} />
+                  </div>
+                  <input
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
                     className="block w-full pl-14 pr-6 py-4 bg-white/5 border border-white/5 rounded-2xl focus:bg-white/10 focus:ring-4 focus:ring-primary-accent/10 focus:border-primary-accent/40 outline-none transition-all placeholder:text-slate-700 text-white font-black text-xs uppercase tracking-widest"
                   />
                 </div>
               </div>
-            )}
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em] px-1">Email Address</label>
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-500 group-focus-within:text-primary-accent transition-colors">
-                  <Mail size={18} />
-                </div>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="NAME@RESOURCES.COM"
-                  className="block w-full pl-14 pr-12 py-4 bg-white/5 border border-white/5 rounded-2xl focus:bg-white/10 focus:ring-4 focus:ring-primary-accent/10 focus:border-primary-accent/40 outline-none transition-all placeholder:text-slate-700 text-white font-black text-xs uppercase tracking-widest"
-                />
-                {email && email.includes('@') && (
-                  <div className="absolute inset-y-0 right-0 pr-5 flex items-center">
-                    <CheckCircle2 size={18} className="text-secondary-accent" />
-                  </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-primary-accent hover:bg-primary-accent/90 text-white py-5 rounded-2xl font-black uppercase tracking-[0.3em] text-[10px] transition-all shadow-xl shadow-primary-accent/20 flex items-center justify-center gap-3 group active:scale-[0.98] disabled:opacity-50"
+              >
+                {loading ? (
+                  <Loader2 className="animate-spin" size={18} />
+                ) : (
+                  <>
+                    {isLogin ? 'Login' : 'Sign Up'}
+                    <ArrowRight size={16} className="group-hover:translate-x-2 transition-transform" />
+                  </>
                 )}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between px-1">
-                <label className="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em]">Password</label>
-                {isLogin && (
-                  <button type="button" className="text-[10px] font-black uppercase tracking-widest text-primary-accent hover:text-primary-accent/80 transition-colors">Forgot Password</button>
-                )}
-              </div>
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-500 group-focus-within:text-primary-accent transition-colors">
-                  <Lock size={18} />
-                </div>
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="block w-full pl-14 pr-6 py-4 bg-white/5 border border-white/5 rounded-2xl focus:bg-white/10 focus:ring-4 focus:ring-primary-accent/10 focus:border-primary-accent/40 outline-none transition-all placeholder:text-slate-700 text-white font-black text-xs uppercase tracking-widest"
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-primary-accent hover:bg-primary-accent/90 text-white py-5 rounded-2xl font-black uppercase tracking-[0.3em] text-[10px] transition-all shadow-xl shadow-primary-accent/20 flex items-center justify-center gap-3 group active:scale-[0.98] disabled:opacity-50"
-            >
-              {loading ? (
-                <Loader2 className="animate-spin" size={18} />
-              ) : (
-                <>
-                  {isLogin ? 'Login' : 'Sign Up'}
-                  <ArrowRight size={16} className="group-hover:translate-x-2 transition-transform" />
-                </>
-              )}
-            </button>
-          </form>
+              </button>
+            </form>
+          )}
 
           {/* Divider */}
           <div className="relative my-12">
