@@ -41,9 +41,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     localStorage.setItem('luminia-mode', mode);
     if (mode === 'light') {
-      document.body.classList.add('light-theme');
+      document.documentElement.classList.add('light-mode');
     } else {
-      document.body.classList.remove('light-theme');
+      document.documentElement.classList.remove('light-mode');
     }
   }, [mode]);
 

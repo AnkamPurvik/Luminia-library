@@ -7,10 +7,11 @@ import { motion } from 'motion/react';
 import toast from 'react-hot-toast';
 import { 
   ArrowLeft, BookOpen, User, Hash, Tag, 
-  Calendar, Info, History, Loader2, AlertCircle, ShoppingBag, Bookmark
+  Calendar, Info, History, Loader2, AlertCircle, ShoppingBag, Bookmark, Sliders
 } from 'lucide-react';
 
 import { User as FirebaseUser } from 'firebase/auth';
+import { useSettings } from '../context/SettingsContext';
 
 export default function BookDetail({ user, profile }: { user: FirebaseUser | null, profile: any }) {
   const { id } = useParams();
@@ -20,6 +21,7 @@ export default function BookDetail({ user, profile }: { user: FirebaseUser | nul
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const { unitsSystem } = useSettings();
 
   useEffect(() => {
     const fetchBookData = async () => {
@@ -272,6 +274,34 @@ export default function BookDetail({ user, profile }: { user: FirebaseUser | nul
               <p className="text-slate-500 leading-relaxed text-lg font-bold uppercase tracking-tight">
                 {book.description || 'No description available for this title.'}
               </p>
+            </div>
+
+            {/* Physical Specifications */}
+            <div className="mt-8 pt-4 border-t border-white/5 space-y-4">
+              <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+                <Sliders size={16} className="text-secondary-accent" />
+                Physical Specifications
+              </h3>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="glass-panel border-white/5 rounded-2xl p-4 flex flex-col justify-between">
+                  <span className="text-[8px] text-slate-500 font-black uppercase tracking-widest">Weight</span>
+                  <span className="text-sm font-black text-white mt-1">
+                    {unitsSystem === 'metric' ? '0.45 kg' : '0.99 lbs'}
+                  </span>
+                </div>
+                <div className="glass-panel border-white/5 rounded-2xl p-4 flex flex-col justify-between">
+                  <span className="text-[8px] text-slate-500 font-black uppercase tracking-widest">Thickness</span>
+                  <span className="text-sm font-black text-white mt-1">
+                    {unitsSystem === 'metric' ? '2.5 cm' : '0.98 in'}
+                  </span>
+                </div>
+                <div className="glass-panel border-white/5 rounded-2xl p-4 flex flex-col justify-between">
+                  <span className="text-[8px] text-slate-500 font-black uppercase tracking-widest">Library Location</span>
+                  <span className="text-sm font-black text-white mt-1">
+                    {unitsSystem === 'metric' ? '1.2 km' : '0.75 miles'}
+                  </span>
+                </div>
+              </div>
             </div>
           </section>
  

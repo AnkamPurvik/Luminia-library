@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { auth, db, logActivity } from '../lib/firebase';
-import { doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
+import { doc, onSnapshot, updateDoc, deleteDoc, clearIndexedDbPersistence, collection, getDocs, writeBatch, where, query } from 'firebase/firestore';
 import { updateEmail, updatePassword, deleteUser, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { motion } from 'motion/react';
 import { 
@@ -10,6 +10,7 @@ import {
 import toast from 'react-hot-toast';
 import { UserProfile } from '../types';
 import { useTheme } from '../context/ThemeContext';
+import { useSettings, SettingsState } from '../context/SettingsContext';
 
 export default function Settings() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -18,7 +19,7 @@ export default function Settings() {
   const { theme, setTheme, mode, setMode } = useTheme();
   
   // Local state for settings
-  const [settings, setSettings] = useState({
+  const [settings, setSettings] = useState<SettingsState>({
     notifications: true,
     publicProfile: true,
     emailUpdates: false,
@@ -51,13 +52,16 @@ export default function Settings() {
     return () => unsub();
   }, []);
 
+  const { updateSettings, showToast } = useSettings();
+  const [confirmDeleteCheckbox, setConfirmDeleteCheckbox] = useState(false);
+
   const handleSave = async () => {
     if (!auth.currentUser) return;
     setIsSaving(true);
     
     try {
+      await updateSettings(settings);
       await updateDoc(doc(db, 'users', auth.currentUser.uid), {
-        preferences: settings,
         themePref: theme,
         modePref: mode
       });
@@ -70,10 +74,10 @@ export default function Settings() {
         status: 'SUCCESS'
       });
       
-      toast.success('System preferences updated!');
+      showToast.success('System preferences updated!');
     } catch (err) {
       console.error(err);
-      toast.error('Failed to save settings');
+      showToast.error('Failed to save settings');
     } finally {
       setIsSaving(false);
     }
@@ -85,35 +89,53 @@ export default function Settings() {
     if (!user) return;
     
     if (!currentPassword) {
-      toast.error('Current password is required to update credentials.');
+      showToast.error('Current password is required to update credentials.');
+      return;
+    }
+
+    if (newPassword && newPassword.length < 6) {
+      showToast.error('Password is too weak. It must be at least 6 characters.');
       return;
     }
     
     setIsUpdatingAccount(true);
-    const id = toast.loading('Re-authenticating...');
+    const id = showToast.custom ? toast.loading('Re-authenticating...') : '';
     try {
       const credential = EmailAuthProvider.credential(user.email || '', currentPassword);
       await reauthenticateWithCredential(user, credential);
       
       if (newEmail && newEmail !== user.email) {
-        toast.loading('Updating email...', { id });
+        if (id) toast.loading('Updating email...', { id });
         await updateEmail(user, newEmail);
         await updateDoc(doc(db, 'users', user.uid), { email: newEmail });
-        toast.success('Email updated successfully!', { id });
+        showToast.success('Email updated successfully!');
       }
       
       if (newPassword) {
-        toast.loading('Updating password...', { id });
+        if (id) toast.loading('Updating password...', { id });
         await updatePassword(user, newPassword);
-        toast.success('Password updated successfully!', { id });
+        showToast.success('Password updated successfully!');
       }
       
       setCurrentPassword('');
       setNewPassword('');
       setNewEmail('');
+      if (id) toast.dismiss(id);
     } catch (err: any) {
       console.error(err);
-      toast.error(err.message || 'Verification or update failed.', { id });
+      if (id) toast.dismiss(id);
+      
+      let errMsg = 'Verification or update failed.';
+      if (err.code === 'auth/requires-recent-login') {
+        errMsg = 'For security reasons, this action requires a recent login. Please log out and sign back in to change credentials.';
+      } else if (err.code === 'auth/email-already-in-use') {
+        errMsg = 'This email address is already in use by another account.';
+      } else if (err.code === 'auth/weak-password') {
+        errMsg = 'Password must be at least 6 characters.';
+      } else if (err.message) {
+        errMsg = err.message;
+      }
+      showToast.error(errMsg);
     } finally {
       setIsUpdatingAccount(false);
     }
@@ -122,8 +144,13 @@ export default function Settings() {
   const handleDeleteAccount = async () => {
     const user = auth.currentUser;
     if (!user) return;
+
+    if (!confirmDeleteCheckbox) {
+      showToast.error('Please verify the checkbox to authorize account deletion.');
+      return;
+    }
     
-    if (!window.confirm('WARNING: Deleting your account will permanently purge all loans, reservations, and profile metadata. Proceed with absolute caution.')) {
+    if (!window.confirm('WARNING: Deleting your account will permanently purge all loans, reservations, notifications, and profile metadata. This action is irreversible. Proceed?')) {
       return;
     }
     
@@ -131,29 +158,59 @@ export default function Settings() {
     if (!passwordConfirm) return;
     
     setIsSaving(true);
+    const id = showToast.custom ? toast.loading('Purging all user documents...') : '';
     try {
       const credential = EmailAuthProvider.credential(user.email || '', passwordConfirm);
       await reauthenticateWithCredential(user, credential);
       
-      // Delete user doc from firestore
-      await deleteDoc(doc(db, 'users', user.uid));
+      // Batch delete all related documents where userId === user.uid
+      const collectionsToClean = ['transactions', 'reservations', 'notifications', 'chat_sessions', 'activity_logs'];
+      const batch = writeBatch(db);
+      
+      for (const colName of collectionsToClean) {
+        const q = query(collection(db, colName), where('userId', '==', user.uid));
+        const snap = await getDocs(q);
+        snap.forEach(docSnap => {
+          batch.delete(docSnap.ref);
+        });
+      }
+      
+      // Delete user profile doc from firestore
+      batch.delete(doc(db, 'users', user.uid));
+      await batch.commit();
+
+      if (id) toast.loading('Deleting account credentials...', { id });
       
       // Delete auth user
       await deleteUser(user);
       
-      toast.success('Your profile has been deleted.');
-      auth.signOut();
+      if (id) toast.dismiss(id);
+      showToast.success('Your profile and all data have been completely deleted.');
+      
+      await auth.signOut();
+      window.location.href = '#/login';
     } catch (err: any) {
       console.error(err);
-      toast.error(err.message || 'Deletion failed. Check your password.');
+      if (id) toast.dismiss(id);
+      showToast.error(err.message || 'Deletion failed. Check your password.');
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleClearCache = () => {
-    localStorage.clear();
-    toast.success('Local settings and theme cache purged successfully.');
+  const handleClearCache = async () => {
+    try {
+      localStorage.clear();
+      await clearIndexedDbPersistence(db);
+      showToast.success('Local settings and IndexedDB database persistence cache purged successfully. Reloading...');
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (err: any) {
+      console.error('Cache clearing failed:', err);
+      showToast.error('Cache clearing failed, but local storage was wiped.');
+      window.location.reload();
+    }
   };
 
   if (isLoading) {
@@ -248,7 +305,7 @@ export default function Settings() {
                 <label className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Auto-Refresh Interval</label>
                 <select 
                   value={settings.refreshInterval}
-                  onChange={(e) => setSettings({ ...settings, refreshInterval: e.target.value })}
+                  onChange={(e) => setSettings({ ...settings, refreshInterval: e.target.value as any })}
                   className="w-full px-4 py-3 bg-white/5 border border-white/5 rounded-xl text-white font-black text-[10px] uppercase outline-none focus:border-primary-accent"
                 >
                   <option value="10s" className="bg-bg-dark">10 Seconds</option>
@@ -265,7 +322,7 @@ export default function Settings() {
                   {['metric', 'imperial'].map((u) => (
                     <button
                       key={u}
-                      onClick={() => setSettings({ ...settings, units: u })}
+                      onClick={() => setSettings({ ...settings, units: u as any })}
                       className={`flex-1 py-3 border rounded-xl text-[9px] font-black uppercase tracking-wider transition-all ${
                         settings.units === u ? 'bg-primary-accent/10 border-primary-accent text-white' : 'bg-transparent border-white/5 text-slate-500 hover:bg-white/[0.02]'
                       }`}
@@ -423,9 +480,24 @@ export default function Settings() {
             </h3>
             <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Actions in this zone are destructive and cannot be undone.</p>
           </div>
+          
+          <div className="flex items-start gap-4">
+            <input 
+              type="checkbox" 
+              id="confirm-delete-check"
+              checked={confirmDeleteCheckbox}
+              onChange={(e) => setConfirmDeleteCheckbox(e.target.checked)}
+              className="mt-1 w-4 h-4 rounded border-rose-500/30 text-rose-600 focus:ring-rose-500 bg-black/10"
+            />
+            <label htmlFor="confirm-delete-check" className="text-[9px] text-slate-400 font-bold uppercase tracking-widest select-none cursor-pointer">
+              I authorize the permanent deletion of my account and all associated loans, history, and reservations.
+            </label>
+          </div>
+
           <button 
             onClick={handleDeleteAccount}
-            className="py-4 px-8 bg-rose-600 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[9px] hover:bg-rose-700 transition-all active:scale-95 shadow-xl shadow-rose-600/10 flex items-center gap-2"
+            disabled={!confirmDeleteCheckbox}
+            className="py-4 px-8 bg-rose-600 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[9px] hover:bg-rose-700 transition-all active:scale-95 shadow-xl shadow-rose-600/10 flex items-center gap-2 disabled:opacity-50"
           >
             <Trash2 size={12} />
             Permanently Purge & Delete Account
@@ -443,14 +515,32 @@ export default function Settings() {
             Save System Preferences
           </button>
           <button 
-            onClick={() => setSettings({
-              notifications: true,
-              publicProfile: true,
-              emailUpdates: false,
-              refreshInterval: '30s',
-              units: 'metric',
-              analyticsOptOut: false
-            })}
+            onClick={async () => {
+              const defaults = {
+                notifications: true,
+                publicProfile: true,
+                emailUpdates: false,
+                refreshInterval: '30s' as const,
+                units: 'metric' as const,
+                analyticsOptOut: false
+              };
+              setSettings(defaults);
+              setTheme('indigo');
+              setMode('dark');
+              setIsSaving(true);
+              try {
+                await updateSettings(defaults);
+                await updateDoc(doc(db, 'users', auth.currentUser!.uid), {
+                  themePref: 'indigo',
+                  modePref: 'dark'
+                });
+                showToast.success('Restored default preferences!');
+              } catch (err) {
+                showToast.error('Failed to restore defaults.');
+              } finally {
+                setIsSaving(false);
+              }
+            }}
             className="px-10 py-5 bg-white/5 text-slate-500 rounded-3xl font-black uppercase tracking-[0.3em] text-[10px] hover:bg-white/10 transition-all border border-white/5"
           >
             Reset Defaults

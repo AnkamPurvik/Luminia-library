@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
-import { auth, db } from './lib/firebase';
+import { auth, db, purgeOldActivityLogs } from './lib/firebase';
 import { UserProfile } from './types';
 import { Toaster } from 'react-hot-toast';
 import { Sidebar } from './components/layout/Sidebar';
@@ -15,6 +15,7 @@ import { Header } from './components/layout/Header';
 import { MobileNav } from './components/layout/MobileNav';
 import { ChatWidget } from './components/ui/ChatWidget';
 import { ThemeProvider } from './context/ThemeContext';
+import { SettingsProvider } from './context/SettingsContext';
 import { Loader2 } from 'lucide-react';
 import { lazy, Suspense } from 'react';
 
@@ -36,6 +37,9 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
+    // Run TTL logs purge in background on mount
+    purgeOldActivityLogs();
+
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (!currentUser) {
@@ -97,8 +101,9 @@ export default function App() {
 
   return (
     <ThemeProvider>
-      <Router>
-        <div className="h-screen bg-bg-dark text-slate-100 font-sans antialiased selection:bg-primary-accent/30 overflow-hidden flex">
+      <SettingsProvider>
+        <Router>
+          <div className="h-screen bg-bg-dark text-slate-100 font-sans antialiased selection:bg-primary-accent/30 overflow-hidden flex">
           <Toaster position="top-center" />
           
           {/* Desktop Sidebar — hidden on mobile */}
@@ -154,6 +159,7 @@ export default function App() {
         {/* Floating Chat Widget — show for logged-in non-admin users */}
         {user && !isAdmin && <ChatWidget />}
       </Router>
+     </SettingsProvider>
     </ThemeProvider>
   );
 }

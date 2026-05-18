@@ -21,11 +21,72 @@
   color-scheme: dark;
 }
 
-.light-theme {
-  --bg-color: #f0f4f8;
+.light-mode {
+  --bg-color: #f8fafc;
   --surface-color: #ffffff;
   --white-override: 15, 23, 42; /* slate-900 */
   color-scheme: light;
+}
+
+/* Premium Light Mode Overrides */
+.light-mode .glass-panel {
+  background-color: rgba(255, 255, 255, 0.7) !important;
+  backdrop-filter: blur(20px) !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+  box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.05), 0 10px 10px -5px rgba(15, 23, 42, 0.02) !important;
+}
+
+.light-mode .text-slate-500 {
+  color: #475569 !important; /* slate-600 */
+}
+
+.light-mode .text-slate-600 {
+  color: #334155 !important; /* slate-700 */
+}
+
+.light-mode .text-slate-700 {
+  color: #1e293b !important; /* slate-800 */
+}
+
+.light-mode .text-white\/70 {
+  color: rgba(15, 23, 42, 0.7) !important;
+}
+
+.light-mode .bg-white\/5 {
+  background-color: rgba(15, 23, 42, 0.05) !important;
+}
+
+.light-mode .bg-white\/10 {
+  background-color: rgba(15, 23, 42, 0.09) !important;
+}
+
+.light-mode .bg-white\/\[0\.02\] {
+  background-color: rgba(15, 23, 42, 0.02) !important;
+}
+
+.light-mode .border-white\/5 {
+  border-color: rgba(15, 23, 42, 0.07) !important;
+}
+
+.light-mode .border-white\/10 {
+  border-color: rgba(15, 23, 42, 0.12) !important;
+}
+
+.light-mode .hover\:bg-white\/10:hover {
+  background-color: rgba(15, 23, 42, 0.09) !important;
+}
+
+.light-mode .hover\:bg-white\/\[0\.02\]:hover {
+  background-color: rgba(15, 23, 42, 0.02) !important;
+}
+
+.light-mode .text-primary-accent {
+  color: var(--primary-accent) !important;
+}
+
+.light-mode select option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
 }
 
 body {
