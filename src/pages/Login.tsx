@@ -38,18 +38,32 @@ export default function Login() {
       return;
     }
     setLoading(true);
+    
+    // Alert user if the server is taking time to wake up (Render free tier)
+    const timeoutId = setTimeout(() => {
+      toast.loading(
+        'Render backend is waking up! This can take up to 50 seconds on free-tier containers. Please stand by...', 
+        { id: 'otp-wake-toast', duration: 30000 }
+      );
+    }, 5000);
+
     try {
       const res = await fetch(`${API_BASE_URL}/api/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
       });
+      clearTimeout(timeoutId);
+      toast.dismiss('otp-wake-toast');
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to dispatch verification code.');
 
       setOtpSent(true);
       toast.success(data.message || 'Verification passcode dispatched! Check your email or check local otp-logs.txt.');
     } catch (err: any) {
+      clearTimeout(timeoutId);
+      toast.dismiss('otp-wake-toast');
       console.error(err);
       toast.error(err.message || 'Could not send verification code.');
     } finally {
@@ -65,12 +79,23 @@ export default function Login() {
       return;
     }
     setLoading(true);
+    
+    const timeoutId = setTimeout(() => {
+      toast.loading(
+        'Connecting to authentication servers...', 
+        { id: 'verify-wake-toast', duration: 15000 }
+      );
+    }, 5000);
+
     try {
       const res = await fetch(`${API_BASE_URL}/api/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, otpCode })
       });
+      clearTimeout(timeoutId);
+      toast.dismiss('verify-wake-toast');
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Verification failed');
 
@@ -79,6 +104,8 @@ export default function Login() {
       toast.success('Successfully authenticated!');
       navigate('/dashboard');
     } catch (err: any) {
+      clearTimeout(timeoutId);
+      toast.dismiss('verify-wake-toast');
       console.error(err);
       toast.error(err.message || 'Invalid passcode or expired.');
     } finally {
