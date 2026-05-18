@@ -5,6 +5,8 @@ type ThemeColor = 'indigo' | 'cyan' | 'rose' | 'emerald' | 'amber' | 'slate' | '
 interface ThemeContextType {
   theme: ThemeColor;
   setTheme: (theme: ThemeColor) => void;
+  mode: 'dark' | 'light';
+  setMode: (mode: 'dark' | 'light') => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -24,6 +26,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return (localStorage.getItem('luminia-theme') as ThemeColor) || 'indigo';
   });
 
+  const [mode, setModeState] = useState<'dark' | 'light'>(() => {
+    return (localStorage.getItem('luminia-mode') as 'dark' | 'light') || 'dark';
+  });
+
   useEffect(() => {
     localStorage.setItem('luminia-theme', theme);
     const root = document.documentElement;
@@ -32,12 +38,25 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     root.style.setProperty('--secondary-accent', colors.secondary);
   }, [theme]);
 
+  useEffect(() => {
+    localStorage.setItem('luminia-mode', mode);
+    if (mode === 'light') {
+      document.body.classList.add('light-theme');
+    } else {
+      document.body.classList.remove('light-theme');
+    }
+  }, [mode]);
+
   const setTheme = (newTheme: ThemeColor) => {
     setThemeState(newTheme);
   };
 
+  const setMode = (newMode: 'dark' | 'light') => {
+    setModeState(newMode);
+  };
+
   return (
-    <ThemeContext.Provider value={{ theme, setTheme }}>
+    <ThemeContext.Provider value={{ theme, setTheme, mode, setMode }}>
       {children}
     </ThemeContext.Provider>
   );

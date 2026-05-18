@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, onSnapshot, query, addDoc, doc, updateDoc, where, getDocs, getDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, addDoc, doc, updateDoc, where, getDocs, getDoc, limit } from 'firebase/firestore';
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
 import { Book } from '../types';
 import { BookCard } from '../components/books/BookCard';
-import { Search, Filter, Loader2, Library, BookX, Database, LogIn, LogOut, Zap, Shield, Sparkles } from 'lucide-react';
+import { Search, Filter, Loader2, Library, BookX, Database, LogIn, LogOut, Zap, Shield, Sparkles, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Modal } from '../components/ui/Modal';
 import toast from 'react-hot-toast';
@@ -57,6 +57,8 @@ export default function OPAC({ searchQuery: globalSearch, onSearchChange: setGlo
   const [books, setBooks] = useState<Book[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const [booksLimit, setBooksLimit] = useState(8);
+  const [hasMore, setHasMore] = useState(false);
   const [isSeeding, setIsSeeding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [modalConfig, setModalConfig] = useState<{
@@ -82,13 +84,18 @@ export default function OPAC({ searchQuery: globalSearch, onSearchChange: setGlo
       return;
     }
 
-    const q = query(collection(db, 'books'));
+    const q = query(collection(db, 'books'), limit(booksLimit + 1));
     const unsubscribe = onSnapshot(q, 
       (snapshot) => {
-        const booksData = snapshot.docs.map(doc => ({
+        const docs = snapshot.docs;
+        const more = docs.length > booksLimit;
+        setHasMore(more);
+        
+        const booksData = docs.slice(0, booksLimit).map(doc => ({
           id: doc.id,
           ...doc.data()
         })) as Book[];
+        
         setBooks(booksData);
         setIsLoading(false);
         setError(null); // Clear error on success
@@ -101,7 +108,7 @@ export default function OPAC({ searchQuery: globalSearch, onSearchChange: setGlo
     );
 
     return () => unsubscribe();
-  }, [user]);
+  }, [user, booksLimit]);
 
   const handleLogin = async () => {
     try {
@@ -153,7 +160,6 @@ export default function OPAC({ searchQuery: globalSearch, onSearchChange: setGlo
   };
 
   const handleBorrowOrReserve = async (bookId: string) => {
-    console.log('handleBorrowOrReserve called for bookId:', bookId);
     if (!user) {
       toast.error('Please sign in to borrow or reserve books.');
       return;
@@ -217,7 +223,6 @@ export default function OPAC({ searchQuery: globalSearch, onSearchChange: setGlo
 
     try {
       if (book.availableCopies > 0) {
-        console.log('Attempting to borrow book:', book.title);
         // Borrow logic
         const dueDate = new Date();
         dueDate.setDate(dueDate.getDate() + 14); // 2 weeks
@@ -243,16 +248,13 @@ export default function OPAC({ searchQuery: globalSearch, onSearchChange: setGlo
         };
 
         await addDoc(collection(db, 'transactions'), transactionData);
-        console.log('Transaction created');
 
         await updateDoc(doc(db, 'books', book.id), {
           availableCopies: book.availableCopies - 1
         });
-        console.log('Book availability updated');
         
         toast.success(`Successfully borrowed "${book.title}"!`);
       } else {
-        console.log('Attempting to reserve book:', book.title);
         // Reserve logic
         const reservationData = {
           userId: user.uid,
@@ -265,7 +267,6 @@ export default function OPAC({ searchQuery: globalSearch, onSearchChange: setGlo
         };
 
         await addDoc(collection(db, 'reservations'), reservationData);
-        console.log('Reservation created');
         
         toast('Book reserved. You will be notified when it is available.', {
           icon: 'ℹ️',
@@ -419,18 +420,29 @@ export default function OPAC({ searchQuery: globalSearch, onSearchChange: setGlo
 
             <AnimatePresence mode="popLayout">
               {filteredBooks.length > 0 ? (
-                <motion.div 
-                  layout
-                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-                >
-                  {filteredBooks.map((book) => (
-                    <BookCard 
-                      key={book.id} 
-                      book={book} 
-                      onReserve={handleBorrowOrReserve}
-                    />
-                  ))}
-                </motion.div>
+                <div className="flex flex-col items-center gap-12 w-full">
+                  <motion.div 
+                    layout
+                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 w-full"
+                  >
+                    {filteredBooks.map((book) => (
+                      <BookCard 
+                        key={book.id} 
+                        book={book} 
+                        onReserve={handleBorrowOrReserve}
+                      />
+                    ))}
+                  </motion.div>
+                  {hasMore && (
+                    <button 
+                      onClick={() => setBooksLimit(prev => prev + 8)}
+                      className="px-10 py-5 bg-white/5 text-white/85 hover:text-white rounded-3xl font-black uppercase tracking-[0.25em] text-[10px] hover:bg-white/10 transition-all border border-white/5 hover:scale-102 active:scale-98 shadow-xl shadow-black/10 flex items-center gap-3"
+                    >
+                      <RefreshCw className="h-3 w-3 animate-spin-slow" />
+                      Load More Titles
+                    </button>
+                  )}
+                </div>
               ) : (
                 <motion.div
                   initial={{ opacity: 0 }}

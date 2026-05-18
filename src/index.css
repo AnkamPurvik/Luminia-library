@@ -7,17 +7,29 @@
   
   --color-primary-accent: var(--primary-accent, #4F46E5);
   --color-secondary-accent: var(--secondary-accent, #06B6D4);
-  --color-bg-dark: #020203;
-  --color-surface-dark: #08080A;
+  --color-bg-dark: var(--bg-color);
+  --color-surface-dark: var(--surface-color);
+  --color-white: rgb(var(--white-override));
 }
 
 :root {
   --primary-accent: #4F46E5;
   --secondary-accent: #06B6D4;
+  --bg-color: #020203;
+  --surface-color: #08080A;
+  --white-override: 255, 255, 255;
+  color-scheme: dark;
+}
+
+.light-theme {
+  --bg-color: #f0f4f8;
+  --surface-color: #ffffff;
+  --white-override: 15, 23, 42; /* slate-900 */
+  color-scheme: light;
 }
 
 body {
-  @apply font-sans bg-bg-dark text-slate-100 antialiased;
+  @apply font-sans bg-bg-dark text-white antialiased transition-colors duration-300;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
