@@ -15,7 +15,7 @@ import { CriticalAlertBar } from './CriticalAlertBar';
 import { FilterPanel } from './FilterPanel';
 import { ExportButton } from './ExportButton';
 import { AlertCard } from './AlertCard';
-import { InnovationPanel } from './InnovationPanel';
+import PredictiveOverdueAlerts from './PredictiveOverdueAlerts';
 import toast from 'react-hot-toast';
 
 import { User as FirebaseUser } from 'firebase/auth';
@@ -333,7 +333,7 @@ export default function ActivityTimeline({
 
         {/* Right Side: Innovative Predictive Panel widgets (1/3 column) */}
         <div className="lg:col-span-1">
-          <InnovationPanel />
+          <PredictiveOverdueAlerts />
         </div>
 
       </div>
