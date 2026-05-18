@@ -4,23 +4,32 @@ import {
   sendSignInLinkToEmail, 
   isSignInWithEmailLink, 
   signInWithEmailLink,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   signInWithPopup, 
-  GoogleAuthProvider 
+  GoogleAuthProvider,
+  updateProfile
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { motion, AnimatePresence } from 'motion/react';
-import { Mail, ArrowRight, Loader2, Library, CheckCircle2, Sparkles, Send } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, Loader2, Library, CheckCircle2, Key, Send } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import heroImage from '../assets/login-hero.png';
 
 export default function Login() {
   const navigate = useNavigate();
+  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // Auth Method: 'password' (Standard) or 'magic-link' (Secure Access Link)
+  const [authMethod, setAuthMethod] = useState<'password' | 'magic-link'>('password');
   const [linkSent, setLinkSent] = useState(false);
 
-  // 1. Complete Passwordless Magic Link Sign-In when returning to the app
+  // 1. Complete Secure Access Link Sign-In when returning to the app
   useEffect(() => {
     const completeMagicLinkSignIn = async () => {
       const url = window.location.href;
@@ -42,11 +51,11 @@ export default function Login() {
         try {
           await signInWithEmailLink(auth, emailForSignIn, url);
           window.localStorage.removeItem('emailForSignIn');
-          toast.success('Successfully authenticated with Magic Link!');
+          toast.success('Successfully authenticated with Secure Access Link!');
           navigate('/dashboard');
         } catch (err: any) {
-          console.error('Magic Link Sign-In Error:', err);
-          toast.error(err.message || 'Failed to authenticate with the magic link.');
+          console.error('Secure Access Link Sign-In Error:', err);
+          toast.error(err.message || 'Failed to authenticate with the secure access link.');
         } finally {
           setLoading(false);
         }
@@ -66,7 +75,32 @@ export default function Login() {
     return () => unsub();
   }, [navigate]);
 
-  // 3. Dispatch Passwordless Magic Link
+  // 3. Handle Standard Password Login / Sign Up
+  const handleStandardAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      if (isLogin) {
+        await signInWithEmailAndPassword(auth, email, password);
+        toast.success('Welcome back!');
+      } else {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        await updateProfile(userCredential.user, {
+          displayName: name
+        });
+        toast.success('Reader account created successfully!');
+      }
+      navigate('/dashboard');
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Authentication failed. Please verify credentials.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 4. Dispatch Secure Access Link (Passwordless)
   const handleSendMagicLink = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) {
@@ -88,10 +122,10 @@ export default function Login() {
       await sendSignInLinkToEmail(auth, email, actionCodeSettings);
       
       setLinkSent(true);
-      toast.success('Secure magic link dispatched to your inbox!');
+      toast.success('Secure access link dispatched to your inbox!');
     } catch (err: any) {
       console.error('Magic Link Send Error:', err);
-      toast.error(err.message || 'Failed to dispatch magic link. Please check your config.');
+      toast.error(err.message || 'Failed to dispatch secure access link. Please check your config.');
     } finally {
       setLoading(false);
     }
@@ -127,23 +161,103 @@ export default function Login() {
 
           <header className="mb-10">
             <h1 className="text-5xl font-black text-white mb-4 leading-tight tracking-tighter uppercase">
-              Magic Entry
+              {isLogin ? 'Login' : 'Sign Up'}
             </h1>
             <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">
-              Access your library catalog instantly without any passwords.
+              {isLogin 
+                ? 'Enter your credentials or request a secure sign-in link to access your library account.' 
+                : 'Create a new reader account to get started.'}
             </p>
           </header>
 
+          {/* Tab 1: Login vs Sign Up (Only shown for password auth or general layout) */}
+          <div className="bg-white/5 p-1.5 rounded-2xl flex mb-6 border border-white/5 shadow-inner">
+            <button 
+              onClick={() => {
+                setIsLogin(true);
+                setLinkSent(false);
+              }}
+              className={`flex-1 py-3 text-[10px] font-black uppercase tracking-[0.2em] rounded-xl transition-all ${
+                isLogin ? 'bg-primary-accent text-white shadow-lg shadow-primary-accent/20' : 'text-slate-500 hover:text-slate-300'
+              }`}
+            >
+              Login
+            </button>
+            <button 
+              onClick={() => {
+                setIsLogin(false);
+                setAuthMethod('password'); // Signup always goes through password route
+                setLinkSent(false);
+              }}
+              className={`flex-1 py-3 text-[10px] font-black uppercase tracking-[0.2em] rounded-xl transition-all ${
+                !isLogin ? 'bg-primary-accent text-white shadow-lg shadow-primary-accent/20' : 'text-slate-500 hover:text-slate-300'
+              }`}
+            >
+              Sign Up
+            </button>
+          </div>
+
+          {/* Tab 2: Standard Password vs Secure Access Link (Only shown during Login state) */}
+          {isLogin && (
+            <div className="flex gap-4 mb-10">
+              <button 
+                type="button"
+                onClick={() => {
+                  setAuthMethod('password');
+                  setLinkSent(false);
+                }}
+                className={`flex-1 py-2.5 text-[9px] font-black uppercase tracking-wider rounded-xl transition-all border flex items-center justify-center gap-1.5 ${
+                  authMethod === 'password' 
+                    ? 'bg-primary-accent/15 border-primary-accent text-white shadow-xl shadow-primary-accent/10' 
+                    : 'bg-transparent border-white/5 text-slate-500 hover:text-slate-300'
+                }`}
+              >
+                Password Login
+              </button>
+              <button 
+                type="button"
+                onClick={() => setAuthMethod('magic-link')}
+                className={`flex-1 py-2.5 text-[9px] font-black uppercase tracking-wider rounded-xl transition-all border flex items-center justify-center gap-1.5 ${
+                  authMethod === 'magic-link' 
+                    ? 'bg-secondary-accent/15 border-secondary-accent text-white shadow-xl shadow-secondary-accent/10' 
+                    : 'bg-transparent border-white/5 text-slate-500 hover:text-slate-300'
+                }`}
+              >
+                <Key size={11} className="text-secondary-accent" />
+                Secure Access Link
+              </button>
+            </div>
+          )}
+
           <AnimatePresence mode="wait">
-            {!linkSent ? (
+            {authMethod === 'password' || !isLogin ? (
               <motion.form 
-                key="input-form"
+                key="password-form"
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -15 }}
-                onSubmit={handleSendMagicLink} 
+                onSubmit={handleStandardAuth} 
                 className="space-y-6"
               >
+                {!isLogin && (
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em] px-1">Full Name</label>
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-500 group-focus-within:text-primary-accent transition-colors">
+                        <User size={18} />
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="ENTER FULL NAME"
+                        className="block w-full pl-14 pr-6 py-4 bg-white/5 border border-white/5 rounded-2xl focus:bg-white/10 focus:ring-4 focus:ring-primary-accent/10 focus:border-primary-accent/40 outline-none transition-all placeholder:text-slate-700 text-white font-black text-xs uppercase tracking-widest"
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em] px-1">Email Address</label>
                   <div className="relative group">
@@ -166,6 +280,28 @@ export default function Login() {
                   </div>
                 </div>
 
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between px-1">
+                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em]">Password</label>
+                    {isLogin && (
+                      <button type="button" className="text-[10px] font-black uppercase tracking-widest text-primary-accent hover:text-primary-accent/80 transition-colors">Forgot Password</button>
+                    )}
+                  </div>
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-500 group-focus-within:text-primary-accent transition-colors">
+                      <Lock size={18} />
+                    </div>
+                    <input
+                      type="password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="block w-full pl-14 pr-6 py-4 bg-white/5 border border-white/5 rounded-2xl focus:bg-white/10 focus:ring-4 focus:ring-primary-accent/10 focus:border-primary-accent/40 outline-none transition-all placeholder:text-slate-700 text-white font-black text-xs uppercase tracking-widest"
+                    />
+                  </div>
+                </div>
+
                 <button
                   type="submit"
                   disabled={loading}
@@ -175,7 +311,7 @@ export default function Login() {
                     <Loader2 className="animate-spin" size={18} />
                   ) : (
                     <>
-                      Send Magic Link
+                      {isLogin ? 'Login' : 'Sign Up'}
                       <ArrowRight size={16} className="group-hover:translate-x-2 transition-transform" />
                     </>
                   )}
@@ -183,35 +319,76 @@ export default function Login() {
               </motion.form>
             ) : (
               <motion.div 
-                key="success-panel"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
+                key="magic-link-section"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
                 className="space-y-6"
               >
-                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-6 text-center space-y-4">
-                  <div className="w-12 h-12 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center mx-auto animate-pulse">
-                    <Send className="text-emerald-400" size={20} />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-[10px] text-emerald-400 font-black uppercase tracking-widest">
-                      Magic link dispatched to:
+                {!linkSent ? (
+                  <form onSubmit={handleSendMagicLink} className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em] px-1">Email Address</label>
+                      <div className="relative group">
+                        <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-500 group-focus-within:text-secondary-accent transition-colors">
+                          <Mail size={18} />
+                        </div>
+                        <input
+                          type="email"
+                          required
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="NAME@RESOURCES.COM"
+                          className="block w-full pl-14 pr-12 py-4 bg-white/5 border border-white/5 rounded-2xl focus:bg-white/10 focus:ring-4 focus:ring-secondary-accent/10 focus:border-secondary-accent/40 outline-none transition-all placeholder:text-slate-700 text-white font-black text-xs uppercase tracking-widest"
+                        />
+                        {email && email.includes('@') && (
+                          <div className="absolute inset-y-0 right-0 pr-5 flex items-center">
+                            <CheckCircle2 size={18} className="text-secondary-accent" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full bg-secondary-accent hover:bg-secondary-accent/90 text-white py-5 rounded-2xl font-black uppercase tracking-[0.3em] text-[10px] transition-all shadow-xl shadow-secondary-accent/20 flex items-center justify-center gap-3 group active:scale-[0.98] disabled:opacity-50"
+                    >
+                      {loading ? (
+                        <Loader2 className="animate-spin" size={18} />
+                      ) : (
+                        <>
+                          Send Sign-in Link
+                          <ArrowRight size={16} className="group-hover:translate-x-2 transition-transform" />
+                        </>
+                      )}
+                    </button>
+                  </form>
+                ) : (
+                  <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-6 text-center space-y-4">
+                    <div className="w-12 h-12 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center mx-auto animate-pulse">
+                      <Send className="text-emerald-400" size={20} />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[10px] text-emerald-400 font-black uppercase tracking-widest">
+                        Sign-in link dispatched to:
+                      </p>
+                      <p className="text-sm text-white font-bold tracking-tight">
+                        {email}
+                      </p>
+                    </div>
+                    <p className="text-[11px] text-slate-400 leading-relaxed">
+                      We have sent a secure, passwordless sign-in link to your library email. Click the link inside your inbox to authorize and access your account!
                     </p>
-                    <p className="text-sm text-white font-bold tracking-tight">
-                      {email}
-                    </p>
+                    <button 
+                      type="button" 
+                      onClick={() => setLinkSent(false)} 
+                      className="text-[9px] text-primary-accent hover:underline font-black uppercase tracking-widest mt-2 block mx-auto"
+                    >
+                      Change Email Address
+                    </button>
                   </div>
-                  <p className="text-[11px] text-slate-400 leading-relaxed">
-                    We have sent a secure passwordless link to your email address. Click the link to authorize and instantly access your account!
-                  </p>
-                  <button 
-                    type="button" 
-                    onClick={() => setLinkSent(false)} 
-                    className="text-[9px] text-primary-accent hover:underline font-black uppercase tracking-widest mt-2 block mx-auto"
-                  >
-                    Change Email Address
-                  </button>
-                </div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -251,7 +428,7 @@ export default function Login() {
 
           <footer className="mt-16 text-center">
             <p className="text-[10px] text-slate-600 font-bold uppercase tracking-widest leading-relaxed">
-              Secure passwordless authentication enabled. Your identity is verified instantly by clicking the link.
+              Secure authentication enabled. Your reader account data is protected with industry-standard encryption.
             </p>
           </footer>
         </div>
