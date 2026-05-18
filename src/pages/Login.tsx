@@ -28,6 +28,8 @@ export default function Login() {
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState('');
 
+  const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+
   // Handle requesting 6-digit verification code
   const handleRequestOTP = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,7 +39,7 @@ export default function Login() {
     }
     setLoading(true);
     try {
-      const res = await fetch('/api/send-otp', {
+      const res = await fetch(`${API_BASE_URL}/api/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
@@ -64,7 +66,7 @@ export default function Login() {
     }
     setLoading(true);
     try {
-      const res = await fetch('/api/verify-otp', {
+      const res = await fetch(`${API_BASE_URL}/api/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, otpCode })
