@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Search, Clock, Sparkles, ShieldCheck } from 'lucide-react';
 import { UserProfile } from '../../types';
 
+import NotificationBell from '../NotificationBell';
+
 interface HeaderProps {
   profile: UserProfile | null;
   searchQuery: string;
@@ -61,11 +63,12 @@ export function Header({ profile, searchQuery, onSearchChange }: HeaderProps) {
           </span>
         </div>
 
-        <div className="hidden md:block h-8 w-px bg-white/10" />
+        {profile && <div className="hidden md:block h-8 w-px bg-white/10" />}
 
         {/* User Status */}
         {profile ? (
-          <div className="flex items-center gap-3 md:gap-4">
+          <div className="flex items-center gap-3 md:gap-6">
+            <NotificationBell />
             <div className="text-right hidden md:block">
               <div className="flex items-center justify-end gap-2">
                 <span className="text-sm font-black text-white tracking-tight uppercase whitespace-nowrap">{profile.name}</span>

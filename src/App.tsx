@@ -16,6 +16,7 @@ import { MobileNav } from './components/layout/MobileNav';
 import { ChatWidget } from './components/ui/ChatWidget';
 import { ThemeProvider } from './context/ThemeContext';
 import { SettingsProvider } from './context/SettingsContext';
+import { NotificationProvider } from './context/NotificationContext';
 import { Loader2 } from 'lucide-react';
 import { lazy, Suspense } from 'react';
 
@@ -29,6 +30,7 @@ const LuminaPro = lazy(() => import('./pages/LuminaPro'));
 const Login = lazy(() => import('./pages/Login'));
 const ActivityTimeline = lazy(() => import('./pages/ActivityTimeline'));
 const Settings = lazy(() => import('./pages/Settings'));
+const NotificationCenter = lazy(() => import('./pages/NotificationCenter'));
 
 export default function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -102,64 +104,70 @@ export default function App() {
   return (
     <ThemeProvider>
       <SettingsProvider>
-        <Router>
-          <div className="h-screen bg-bg-dark text-slate-100 font-sans antialiased selection:bg-primary-accent/30 overflow-hidden flex">
-          <Toaster position="top-center" />
-          
-          {/* Desktop Sidebar — hidden on mobile */}
-          <div className="hidden md:block">
-            <Sidebar profile={profile} isAdmin={isAdmin} />
-          </div>
-
-          <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-            <Header profile={profile} searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+        <NotificationProvider>
+          <Router>
+            <div className="h-screen bg-bg-dark text-slate-100 font-sans antialiased selection:bg-primary-accent/30 overflow-hidden flex">
+            <Toaster position="top-center" />
             
-            {/* Extra bottom padding on mobile for bottom nav */}
-            <main className="flex-1 overflow-y-auto custom-scrollbar relative pb-20 md:pb-0">
-              <Suspense fallback={
-                <div className="flex flex-col items-center justify-center py-40">
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-primary-accent/20 blur-2xl animate-pulse rounded-full"></div>
-                    <Loader2 className="h-10 w-10 text-primary-accent animate-spin relative z-10" />
+            {/* Desktop Sidebar — hidden on mobile */}
+            <div className="hidden md:block">
+              <Sidebar profile={profile} isAdmin={isAdmin} />
+            </div>
+
+            <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+              <Header profile={profile} searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+              
+              {/* Extra bottom padding on mobile for bottom nav */}
+              <main className="flex-1 overflow-y-auto custom-scrollbar relative pb-20 md:pb-0">
+                <Suspense fallback={
+                  <div className="flex flex-col items-center justify-center py-40">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-primary-accent/20 blur-2xl animate-pulse rounded-full"></div>
+                      <Loader2 className="h-10 w-10 text-primary-accent animate-spin relative z-10" />
+                    </div>
                   </div>
-                </div>
-              }>
-                <Routes>
-                  <Route path="/" element={<OPAC searchQuery={searchQuery} onSearchChange={setSearchQuery} user={user} />} />
-                  <Route path="/book/:id" element={<BookDetail user={user} profile={profile} />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route 
-                    path="/dashboard" 
-                    element={user ? <UserDashboard user={user} profile={profile} /> : <Navigate to="/" />} 
-                  />
-                  <Route 
-                    path="/admin" 
-                    element={isAdmin ? <AdminDashboard user={user} profile={profile} /> : <Navigate to="/" />} 
-                  />
-                  <Route 
-                    path="/admin/book/:id" 
-                    element={isAdmin ? <AdminBookDetail user={user} profile={profile} /> : <Navigate to="/" />} 
-                  />
-                  <Route 
-                    path="/admin/timeline" 
-                    element={isAdmin ? <ActivityTimeline user={user} profile={profile} searchQuery={searchQuery} /> : <Navigate to="/" />} 
-                  />
-                  <Route path="/pro" element={<LuminaPro user={user} profile={profile} />} />
-                  <Route path="/settings" element={<Settings />} />
-                  <Route path="*" element={<Navigate to="/" />} />
-                </Routes>
-              </Suspense>
-            </main>
+                }>
+                  <Routes>
+                    <Route path="/" element={<OPAC searchQuery={searchQuery} onSearchChange={setSearchQuery} user={user} />} />
+                    <Route path="/book/:id" element={<BookDetail user={user} profile={profile} />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route 
+                      path="/dashboard" 
+                      element={user ? <UserDashboard user={user} profile={profile} /> : <Navigate to="/" />} 
+                    />
+                    <Route 
+                      path="/admin" 
+                      element={isAdmin ? <AdminDashboard user={user} profile={profile} /> : <Navigate to="/" />} 
+                    />
+                    <Route 
+                      path="/admin/book/:id" 
+                      element={isAdmin ? <AdminBookDetail user={user} profile={profile} /> : <Navigate to="/" />} 
+                    />
+                    <Route 
+                      path="/admin/timeline" 
+                      element={isAdmin ? <ActivityTimeline user={user} profile={profile} searchQuery={searchQuery} /> : <Navigate to="/" />} 
+                    />
+                    <Route 
+                      path="/notifications" 
+                      element={user ? <NotificationCenter /> : <Navigate to="/" />} 
+                    />
+                    <Route path="/pro" element={<LuminaPro user={user} profile={profile} />} />
+                    <Route path="/settings" element={<Settings />} />
+                    <Route path="*" element={<Navigate to="/" />} />
+                  </Routes>
+                </Suspense>
+              </main>
+            </div>
           </div>
-        </div>
 
-        {/* Mobile Bottom Nav */}
-        <MobileNav profile={profile} isAdmin={isAdmin} />
+          {/* Mobile Bottom Nav */}
+          <MobileNav profile={profile} isAdmin={isAdmin} />
 
-        {/* Floating Chat Widget — show for logged-in non-admin users */}
-        {user && !isAdmin && <ChatWidget />}
-      </Router>
-     </SettingsProvider>
+          {/* Floating Chat Widget — show for logged-in non-admin users */}
+          {user && !isAdmin && <ChatWidget />}
+        </Router>
+       </NotificationProvider>
+      </SettingsProvider>
     </ThemeProvider>
   );
 }

@@ -171,24 +171,9 @@ service cloud.firestore {
     }
     // Notifications Collection
     match /notifications/{notificationId} {
-      function isValidNotification(data) {
-        return data.keys().hasAll(['userId', 'message', 'type', 'read', 'createdAt']) &&
-               data.userId is string &&
-               data.message is string &&
-               data.type in ['availability', 'overdue', 'system', 'update'] &&
-               data.read is bool &&
-               (data.createdAt is string || data.createdAt is timestamp) &&
-               (!('bookId' in data) || data.bookId is string) &&
-               (!('bookTitle' in data) || data.bookTitle is string) &&
-               (!('canOneClickBorrow' in data) || data.canOneClickBorrow is bool) &&
-               (!('reservationId' in data) || data.reservationId is string);
-      }
-
-      allow read: if isAuthenticated() && isOwner(resource.data.userId);
-      allow create: if isAuthenticated() && isValidNotification(request.resource.data);
-      allow update: if isAuthenticated() && isOwner(resource.data.userId) && 
-                    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
-      allow delete: if isAuthenticated() && isOwner(resource.data.userId);
+      allow read, delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && (request.resource.data.userId == request.auth.uid || isAdmin());
+      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
     }
 
     // Activity Logs Collection

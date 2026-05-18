@@ -19,6 +19,7 @@ import { InnovationPanel } from './InnovationPanel';
 import toast from 'react-hot-toast';
 
 import { User as FirebaseUser } from 'firebase/auth';
+import { useNotifications } from '../../context/NotificationContext';
 
 export default function ActivityTimeline({ 
   user, 
@@ -29,6 +30,7 @@ export default function ActivityTimeline({
   profile: any, 
   searchQuery?: string 
 }) {
+  const { sendNotification, showToast } = useNotifications();
   const [logs, setLogs] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -70,25 +72,25 @@ export default function ActivityTimeline({
     }
   };
 
-  // Browser desktop notification trigger
+  // Custom in-app notification trigger
   const triggerPushNotification = (action: string, details: string) => {
-    if (!('Notification' in window)) return;
-    
-    if (Notification.permission === 'granted') {
-      new Notification(`🚨 CRITICAL: ${action}`, {
-        body: details,
-        icon: '/favicon.ico'
-      });
-      playAlertSound();
-    }
-  };
+    sendNotification({
+      userId: auth.currentUser?.uid || '',
+      title: `🚨 CRITICAL: ${action}`,
+      message: details,
+      type: 'critical',
+      category: 'system',
+      priority: 'high',
+      metadata: {
+        actionUrl: '/admin/timeline',
+        actionLabel: 'Audit Logs'
+      }
+    });
 
-  // Request browser notifications permission
-  useEffect(() => {
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
-  }, []);
+    // Also display in-app transient toast
+    showToast(`🚨 CRITICAL: ${action} - ${details}`, 'error');
+    playAlertSound();
+  };
 
   // Set up real-time listener for logs feed
   useEffect(() => {
