@@ -8,7 +8,8 @@ import {
   createUserWithEmailAndPassword,
   signInWithPopup, 
   GoogleAuthProvider,
-  updateProfile
+  updateProfile,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { motion, AnimatePresence } from 'motion/react';
@@ -126,6 +127,27 @@ export default function Login() {
     } catch (err: any) {
       console.error('Magic Link Send Error:', err);
       toast.error(err.message || 'Failed to dispatch secure access link. Please check your config.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      toast.error('Please enter your email address in the field first.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const actionCodeSettings = {
+        // Point back to the login page supporting hash routing
+        url: window.location.origin + window.location.pathname + '#/login',
+      };
+      await sendPasswordResetEmail(auth, email, actionCodeSettings);
+      toast.success('Secure password reset link dispatched to your inbox!');
+    } catch (err: any) {
+      console.error('Password Reset Error:', err);
+      toast.error(err.message || 'Failed to dispatch password reset link.');
     } finally {
       setLoading(false);
     }
@@ -284,7 +306,13 @@ export default function Login() {
                   <div className="flex items-center justify-between px-1">
                     <label className="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em]">Password</label>
                     {isLogin && (
-                      <button type="button" className="text-[10px] font-black uppercase tracking-widest text-primary-accent hover:text-primary-accent/80 transition-colors">Forgot Password</button>
+                      <button 
+                        type="button" 
+                        onClick={handleForgotPassword}
+                        className="text-[10px] font-black uppercase tracking-widest text-primary-accent hover:text-primary-accent/80 transition-colors"
+                      >
+                        Forgot Password
+                      </button>
                     )}
                   </div>
                   <div className="relative group">
@@ -378,7 +406,7 @@ export default function Login() {
                       </p>
                     </div>
                     <p className="text-[11px] text-slate-400 leading-relaxed">
-                      We have sent a secure, passwordless sign-in link to your library email. Click the link inside your inbox to authorize and access your account!
+                      We have sent a secure, passwordless sign-in link to your library email. Click the link inside your inbox to authorize and access your account! Note: If you do not receive the email within 5 minutes, please check your spam folder.
                     </p>
                     <button 
                       type="button" 
