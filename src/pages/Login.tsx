@@ -1,145 +1,97 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword,
+  sendSignInLinkToEmail, 
+  isSignInWithEmailLink, 
+  signInWithEmailLink,
   signInWithPopup, 
-  GoogleAuthProvider,
-  updateProfile,
-  signInWithCustomToken
+  GoogleAuthProvider 
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { motion, AnimatePresence } from 'motion/react';
-import { Mail, Lock, User, ArrowRight, Loader2, Library, CheckCircle2, Key } from 'lucide-react';
+import { Mail, ArrowRight, Loader2, Library, CheckCircle2, Sparkles, Send } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import heroImage from '../assets/login-hero.png';
 
 export default function Login() {
   const navigate = useNavigate();
-  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
-  
-  // OTP State hooks
-  const [authMethod, setAuthMethod] = useState<'password' | 'otp'>('password');
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpCode, setOtpCode] = useState('');
+  const [linkSent, setLinkSent] = useState(false);
 
-  const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+  // 1. Complete Passwordless Magic Link Sign-In when returning to the app
+  useEffect(() => {
+    const completeMagicLinkSignIn = async () => {
+      const url = window.location.href;
+      if (isSignInWithEmailLink(auth, url)) {
+        setLoading(true);
+        let emailForSignIn = window.localStorage.getItem('emailForSignIn');
+        
+        // Handle cross-device/browser security prompt if email is missing from localStorage
+        if (!emailForSignIn) {
+          emailForSignIn = window.prompt('Please confirm your email address to complete sign-in:');
+        }
 
-  // Handle requesting 6-digit verification code
-  const handleRequestOTP = async (e: React.FormEvent) => {
+        if (!emailForSignIn) {
+          toast.error('Email address is required to complete authentication.');
+          setLoading(false);
+          return;
+        }
+
+        try {
+          await signInWithEmailLink(auth, emailForSignIn, url);
+          window.localStorage.removeItem('emailForSignIn');
+          toast.success('Successfully authenticated with Magic Link!');
+          navigate('/dashboard');
+        } catch (err: any) {
+          console.error('Magic Link Sign-In Error:', err);
+          toast.error(err.message || 'Failed to authenticate with the magic link.');
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    completeMagicLinkSignIn();
+  }, [navigate]);
+
+  // 2. Redirect to dashboard if already authenticated
+  useEffect(() => {
+    const unsub = auth.onAuthStateChanged((user) => {
+      if (user && !isSignInWithEmailLink(auth, window.location.href)) {
+        navigate('/dashboard');
+      }
+    });
+    return () => unsub();
+  }, [navigate]);
+
+  // 3. Dispatch Passwordless Magic Link
+  const handleSendMagicLink = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) {
       toast.error('Please enter your email address first.');
       return;
     }
     setLoading(true);
-    
-    // Alert user if the server is taking time to wake up (Render free tier)
-    const timeoutId = setTimeout(() => {
-      toast.loading(
-        'Render backend is waking up! This can take up to 50 seconds on free-tier containers. Please stand by...', 
-        { id: 'otp-wake-toast', duration: 30000 }
-      );
-    }, 5000);
-
     try {
-      const res = await fetch(`${API_BASE_URL}/api/send-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      });
-      clearTimeout(timeoutId);
-      toast.dismiss('otp-wake-toast');
+      const actionCodeSettings = {
+        // Dynamically point to the login page supporting hash router
+        url: window.location.origin + window.location.pathname + '#/login',
+        handleCodeInApp: true,
+      };
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to dispatch verification code.');
+      // Store email in local storage for confirmation step on return
+      window.localStorage.setItem('emailForSignIn', email);
 
-      setOtpSent(true);
-      toast.success(data.message || 'Verification passcode dispatched! Check your email or check local otp-logs.txt.');
+      // Trigger Firebase Magic Link Delivery
+      await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+      
+      setLinkSent(true);
+      toast.success('Secure magic link dispatched to your inbox!');
     } catch (err: any) {
-      clearTimeout(timeoutId);
-      toast.dismiss('otp-wake-toast');
-      console.error(err);
-      toast.error(err.message || 'Could not send verification code.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Handle verifying code and signing in
-  const handleVerifyOTP = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!otpCode || otpCode.length !== 6) {
-      toast.error('Please enter the 6-digit numeric verification code.');
-      return;
-    }
-    setLoading(true);
-    
-    const timeoutId = setTimeout(() => {
-      toast.loading(
-        'Connecting to authentication servers...', 
-        { id: 'verify-wake-toast', duration: 15000 }
-      );
-    }, 5000);
-
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/verify-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otpCode })
-      });
-      clearTimeout(timeoutId);
-      toast.dismiss('verify-wake-toast');
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Verification failed');
-
-      const { token } = data;
-      await signInWithCustomToken(auth, token);
-      toast.success('Successfully authenticated!');
-      navigate('/dashboard');
-    } catch (err: any) {
-      clearTimeout(timeoutId);
-      toast.dismiss('verify-wake-toast');
-      console.error(err);
-      toast.error(err.message || 'Invalid passcode or expired.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // If already logged in, redirect to dashboard
-  useEffect(() => {
-    const unsub = auth.onAuthStateChanged((user) => {
-      if (user) navigate('/dashboard');
-    });
-    return () => unsub();
-  }, [navigate]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
-        toast.success('Welcome back!');
-      } else {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        await updateProfile(userCredential.user, {
-          displayName: name
-        });
-        toast.success('Account created successfully!');
-      }
-      navigate('/dashboard');
-    } catch (err: any) {
-      console.error(err);
-      toast.error(err.message || 'Authentication failed');
+      console.error('Magic Link Send Error:', err);
+      toast.error(err.message || 'Failed to dispatch magic link. Please check your config.');
     } finally {
       setLoading(false);
     }
@@ -175,249 +127,94 @@ export default function Login() {
 
           <header className="mb-10">
             <h1 className="text-5xl font-black text-white mb-4 leading-tight tracking-tighter uppercase">
-              {isLogin ? 'Login' : 'Sign Up'}
+              Magic Entry
             </h1>
             <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">
-              {isLogin 
-                ? 'Enter your credentials to access your library account.' 
-                : 'Create a new account to get started.'}
+              Access your library catalog instantly without any passwords.
             </p>
           </header>
 
-          {/* Toggle Tab */}
-          <div className="bg-white/5 p-1.5 rounded-2xl flex mb-10 border border-white/5 shadow-inner">
-            <button 
-              onClick={() => setIsLogin(true)}
-              className={`flex-1 py-3 text-[10px] font-black uppercase tracking-[0.2em] rounded-xl transition-all ${
-                isLogin ? 'bg-primary-accent text-white shadow-lg shadow-primary-accent/20' : 'text-slate-500 hover:text-slate-300'
-              }`}
-            >
-              Login
-            </button>
-            <button 
-              onClick={() => setIsLogin(false)}
-              className={`flex-1 py-3 text-[10px] font-black uppercase tracking-[0.2em] rounded-xl transition-all ${
-                !isLogin ? 'bg-primary-accent text-white shadow-lg shadow-primary-accent/20' : 'text-slate-500 hover:text-slate-300'
-              }`}
-            >
-              Sign Up
-            </button>
-          </div>
-
-          {isLogin && (
-            <div className="flex gap-3 mb-8">
-              <button 
-                type="button"
-                onClick={() => { setAuthMethod('password'); setOtpSent(false); }}
-                className={`flex-1 py-2.5 text-[9px] font-black uppercase tracking-wider rounded-xl transition-all border ${
-                  authMethod === 'password' 
-                    ? 'bg-primary-accent/15 border-primary-accent text-white shadow-xl shadow-primary-accent/10' 
-                    : 'bg-transparent border-white/5 text-slate-500 hover:text-slate-300'
-                }`}
+          <AnimatePresence mode="wait">
+            {!linkSent ? (
+              <motion.form 
+                key="input-form"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                onSubmit={handleSendMagicLink} 
+                className="space-y-6"
               >
-                Password Login
-              </button>
-              <button 
-                type="button"
-                onClick={() => setAuthMethod('otp')}
-                className={`flex-1 py-2.5 text-[9px] font-black uppercase tracking-wider rounded-xl transition-all border flex items-center justify-center gap-1.5 ${
-                  authMethod === 'otp' 
-                    ? 'bg-secondary-accent/15 border-secondary-accent text-white shadow-xl shadow-secondary-accent/10' 
-                    : 'bg-transparent border-white/5 text-slate-500 hover:text-slate-300'
-                }`}
-              >
-                <Key size={11} className="text-secondary-accent" />
-                Secure OTP Login
-              </button>
-            </div>
-          )}
-
-          {isLogin && authMethod === 'otp' ? (
-            <div className="space-y-6">
-              {!otpSent ? (
-                <form onSubmit={handleRequestOTP} className="space-y-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em] px-1">Email Address</label>
-                    <div className="relative group">
-                      <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-500 group-focus-within:text-primary-accent transition-colors">
-                        <Mail size={18} />
-                      </div>
-                      <input
-                        type="email"
-                        required
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="NAME@RESOURCES.COM"
-                        className="block w-full pl-14 pr-12 py-4 bg-white/5 border border-white/5 rounded-2xl focus:bg-white/10 focus:ring-4 focus:ring-primary-accent/10 focus:border-primary-accent/40 outline-none transition-all placeholder:text-slate-700 text-white font-black text-xs uppercase tracking-widest"
-                      />
-                      {email && email.includes('@') && (
-                        <div className="absolute inset-y-0 right-0 pr-5 flex items-center">
-                          <CheckCircle2 size={18} className="text-secondary-accent" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full bg-primary-accent hover:bg-primary-accent/90 text-white py-5 rounded-2xl font-black uppercase tracking-[0.3em] text-[10px] transition-all shadow-xl shadow-primary-accent/20 flex items-center justify-center gap-3 group active:scale-[0.98] disabled:opacity-50"
-                  >
-                    {loading ? (
-                      <Loader2 className="animate-spin" size={18} />
-                    ) : (
-                      <>
-                        Send Verification Code
-                        <ArrowRight size={16} className="group-hover:translate-x-2 transition-transform" />
-                      </>
-                    )}
-                  </button>
-                </form>
-              ) : (
-                <form onSubmit={handleVerifyOTP} className="space-y-6">
-                  <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 text-center">
-                    <p className="text-[10px] text-emerald-400 font-black uppercase tracking-widest">
-                      Verification passcode successfully sent to:
-                    </p>
-                    <p className="text-xs text-white font-bold tracking-tight mt-1">
-                      {email}
-                    </p>
-                    <button 
-                      type="button" 
-                      onClick={() => setOtpSent(false)} 
-                      className="text-[9px] text-primary-accent hover:underline font-black uppercase tracking-widest mt-2 block mx-auto"
-                    >
-                      Change Email Address
-                    </button>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em] px-1">Enter 6-Digit Passcode</label>
-                    <div className="relative group">
-                      <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-500 group-focus-within:text-secondary-accent transition-colors">
-                        <Key size={18} />
-                      </div>
-                      <input
-                        type="text"
-                        required
-                        maxLength={6}
-                        value={otpCode}
-                        onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                        placeholder="000000"
-                        className="block w-full pl-14 pr-6 py-4 bg-white/5 border border-white/5 rounded-2xl focus:bg-white/10 focus:ring-4 focus:ring-secondary-accent/10 focus:border-secondary-accent/40 outline-none transition-all placeholder:text-slate-700 text-white font-black text-center text-xl tracking-[0.4em]"
-                      />
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full bg-secondary-accent hover:bg-secondary-accent/90 text-white py-5 rounded-2xl font-black uppercase tracking-[0.3em] text-[10px] transition-all shadow-xl shadow-secondary-accent/20 flex items-center justify-center gap-3 group active:scale-[0.98] disabled:opacity-50"
-                  >
-                    {loading ? (
-                      <Loader2 className="animate-spin" size={18} />
-                    ) : (
-                      <>
-                        Verify & Access Catalog
-                        <CheckCircle2 size={16} className="group-hover:scale-110 transition-transform" />
-                      </>
-                    )}
-                  </button>
-
-                  <div className="text-center">
-                    <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Didn't receive the passcode? </span>
-                    <button 
-                      type="button" 
-                      onClick={handleRequestOTP} 
-                      className="text-[9px] text-slate-400 hover:text-white hover:underline font-black uppercase tracking-widest"
-                    >
-                      Resend Code
-                    </button>
-                  </div>
-                </form>
-              )}
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {!isLogin && (
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em] px-1">Full Name</label>
+                  <label className="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em] px-1">Email Address</label>
                   <div className="relative group">
                     <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-500 group-focus-within:text-primary-accent transition-colors">
-                      <User size={18} />
+                      <Mail size={18} />
                     </div>
                     <input
-                      type="text"
+                      type="email"
                       required
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="ENTER FULL NAME"
-                      className="block w-full pl-14 pr-6 py-4 bg-white/5 border border-white/5 rounded-2xl focus:bg-white/10 focus:ring-4 focus:ring-primary-accent/10 focus:border-primary-accent/40 outline-none transition-all placeholder:text-slate-700 text-white font-black text-xs uppercase tracking-widest"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="NAME@RESOURCES.COM"
+                      className="block w-full pl-14 pr-12 py-4 bg-white/5 border border-white/5 rounded-2xl focus:bg-white/10 focus:ring-4 focus:ring-primary-accent/10 focus:border-primary-accent/40 outline-none transition-all placeholder:text-slate-700 text-white font-black text-xs uppercase tracking-widest"
                     />
+                    {email && email.includes('@') && (
+                      <div className="absolute inset-y-0 right-0 pr-5 flex items-center">
+                        <CheckCircle2 size={18} className="text-secondary-accent" />
+                      </div>
+                    )}
                   </div>
                 </div>
-              )}
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em] px-1">Email Address</label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-500 group-focus-within:text-primary-accent transition-colors">
-                    <Mail size={18} />
-                  </div>
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="NAME@RESOURCES.COM"
-                    className="block w-full pl-14 pr-12 py-4 bg-white/5 border border-white/5 rounded-2xl focus:bg-white/10 focus:ring-4 focus:ring-primary-accent/10 focus:border-primary-accent/40 outline-none transition-all placeholder:text-slate-700 text-white font-black text-xs uppercase tracking-widest"
-                  />
-                  {email && email.includes('@') && (
-                    <div className="absolute inset-y-0 right-0 pr-5 flex items-center">
-                      <CheckCircle2 size={18} className="text-secondary-accent" />
-                    </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-primary-accent hover:bg-primary-accent/90 text-white py-5 rounded-2xl font-black uppercase tracking-[0.3em] text-[10px] transition-all shadow-xl shadow-primary-accent/20 flex items-center justify-center gap-3 group active:scale-[0.98] disabled:opacity-50"
+                >
+                  {loading ? (
+                    <Loader2 className="animate-spin" size={18} />
+                  ) : (
+                    <>
+                      Send Magic Link
+                      <ArrowRight size={16} className="group-hover:translate-x-2 transition-transform" />
+                    </>
                   )}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between px-1">
-                  <label className="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em]">Password</label>
-                  {isLogin && (
-                    <button type="button" className="text-[10px] font-black uppercase tracking-widest text-primary-accent hover:text-primary-accent/80 transition-colors">Forgot Password</button>
-                  )}
-                </div>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-500 group-focus-within:text-primary-accent transition-colors">
-                    <Lock size={18} />
-                  </div>
-                  <input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="block w-full pl-14 pr-6 py-4 bg-white/5 border border-white/5 rounded-2xl focus:bg-white/10 focus:ring-4 focus:ring-primary-accent/10 focus:border-primary-accent/40 outline-none transition-all placeholder:text-slate-700 text-white font-black text-xs uppercase tracking-widest"
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-primary-accent hover:bg-primary-accent/90 text-white py-5 rounded-2xl font-black uppercase tracking-[0.3em] text-[10px] transition-all shadow-xl shadow-primary-accent/20 flex items-center justify-center gap-3 group active:scale-[0.98] disabled:opacity-50"
+                </button>
+              </motion.form>
+            ) : (
+              <motion.div 
+                key="success-panel"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="space-y-6"
               >
-                {loading ? (
-                  <Loader2 className="animate-spin" size={18} />
-                ) : (
-                  <>
-                    {isLogin ? 'Login' : 'Sign Up'}
-                    <ArrowRight size={16} className="group-hover:translate-x-2 transition-transform" />
-                  </>
-                )}
-              </button>
-            </form>
-          )}
+                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-6 text-center space-y-4">
+                  <div className="w-12 h-12 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center mx-auto animate-pulse">
+                    <Send className="text-emerald-400" size={20} />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[10px] text-emerald-400 font-black uppercase tracking-widest">
+                      Magic link dispatched to:
+                    </p>
+                    <p className="text-sm text-white font-bold tracking-tight">
+                      {email}
+                    </p>
+                  </div>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    We have sent a secure passwordless link to your email address. Click the link to authorize and instantly access your account!
+                  </p>
+                  <button 
+                    type="button" 
+                    onClick={() => setLinkSent(false)} 
+                    className="text-[9px] text-primary-accent hover:underline font-black uppercase tracking-widest mt-2 block mx-auto"
+                  >
+                    Change Email Address
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Divider */}
           <div className="relative my-12">
@@ -454,7 +251,7 @@ export default function Login() {
 
           <footer className="mt-16 text-center">
             <p className="text-[10px] text-slate-600 font-bold uppercase tracking-widest leading-relaxed">
-              Secure authentication enabled. Your account data is protected with industry-standard encryption.
+              Secure passwordless authentication enabled. Your identity is verified instantly by clicking the link.
             </p>
           </footer>
         </div>
